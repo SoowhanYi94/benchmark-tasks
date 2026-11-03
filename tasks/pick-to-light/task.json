@@ -1,0 +1,13 @@
+{
+  "title": "Pick an order from a pick-to-light rack",
+  "category": "Impact on jobs",
+  "keywords": ["industrial", "intralogistics", "pick-to-light", "order picking", "quantities", "reading indicators"],
+  "instruction": "pick the order shown by the lamps into the order tote: from each bin, one part for every lit green lamp in front of it, and nothing from bins whose lamps are dark",
+  "context": "Pick-to-light racks, where lamps at each bin show what and how many to pick, are standard in kitting and order-fulfilment lines; a short pick or an extra part is a mis-shipped order.",
+  "setup": "Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. Four dark grey parts bins (each inside 9 x 9 cm, 1 cm walls 3 cm tall, on a 0.6 cm floor) stand fixed at x = 34, centred at y = 15, 5, -5 and -15. Each holds three identical parts standing in a row along x (at x = 31, 34 and 37): yellow plastic cylinders (2.6 cm diameter, 3.5 cm tall, 50 g), grey blocks (2.5 x 2.5 x 3.5 cm, 60 g), orange cylinders (as the yellow) and blue blocks (as the grey), from left to right. In front of each bin (x = 27) are two indicator lamps (1.5 cm cubes) 4 cm apart: the yellow bin's two are lit (bright green), the orange bin's left one is lit, all others are dark. A blue order tote (inside 12 x 14 cm, 1 cm walls 4 cm tall) is fixed at (18, 0).",
+  "scoring": "A part is picked when its centre is inside the tote's walls and its underside within 3 cm of the tote's floor. Per bin, picks up to the number of lit lamps count as correct and any beyond as wrong (every pick from a dark bin is wrong). Score = (correct picks - 1.5 x wrong picks) / 3, but not below 0. Picking nothing scores 0, and so does emptying the rack into the tote; 1.0 for exactly two yellow cylinders and one orange cylinder.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Stand the picked parts back in their bins.",
+  "fidelity": "Approximate. The lamps are fixed coloured blocks (lit ones bright green), not lights that switch, and there is no confirm button. The parts are plain shapes. The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic).",
+  "scores": "Dream-1 run: pending; demo: 1.0"
+}
