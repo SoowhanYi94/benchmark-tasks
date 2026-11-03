@@ -1,0 +1,13 @@
+{
+  "title": "Sort machined blocks with a go/no-go gauge",
+  "category": "Impact on jobs",
+  "keywords": ["industrial", "quality control", "inspection", "go/no-go gauge", "sorting", "tool use"],
+  "instruction": "check each block with the bridge gauge: put the blocks that slide under the bar into the green ACCEPT tray and the ones that don't into the red REJECT tray",
+  "context": "Checking parts with a go/no-go gauge and separating rejects is routine quality-control work on a machine-shop floor; the out-of-tolerance parts can't be told apart by eye, only by the gauge.",
+  "setup": "Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. Five machined aluminium blocks lie flat in a row at x = 15, each with its long side along x: block 1 (6.0 x 4.0 x 3.5 cm tall) at y = 20, block 2 (5.5 x 4.2 x 3.9 cm) at y = 10, block 3 (6.5 x 3.8 x 3.5 cm) at y = 0, block 4 (5.8 x 4.4 x 3.5 cm) at y = -10, block 5 (6.2 x 4.0 x 3.9 cm) at y = -20; each weighs 0.23-0.26 kg. A fixed steel bridge gauge: a bar 2 cm deep (along x), 20 cm long (along y) and 1 cm thick, its near face at x = 31, centred on y = 0, its underside 3.7 cm above the table, held by two 2 x 2 cm posts at its ends. A green ACCEPT tray and a red REJECT tray (each inside 16 x 18 cm, 1 cm walls 3 cm tall, 0.4 cm floor) are fixed to the table, centred at (30, 27) and (30, -27).",
+  "scoring": "A block is in a tray when its centre is inside the tray's walls, its underside is within 1.5 cm of the tray floor, and it is still. The in-tolerance blocks (3.5 cm tall, which pass under the bar) belong in ACCEPT, the oversize ones (3.9 cm, which don't) in REJECT. Score = (blocks in the right tray - 1.5 x blocks in the wrong tray) / 5, but not below 0; blocks anywhere else count neither way. Leaving everything on the table scores 0, and so does putting every block in the same tray; 1.0 when all five are in the right tray.",
+  "run_limit": "3,600 steps (3 minutes at 20 Hz)",
+  "reset_notes": "Put the five blocks back at their positions in the row (block 1 on the left).",
+  "fidelity": "Approximate. The gauge is exact in the simulator: a 3.5 cm block clears the 3.7 cm bar and a 3.9 cm block stops at its face, as a real one would. The trays and the gauge are fixed in place. The blocks are rigid uniform boxes; the simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic), more than bare aluminium on a steel bench.",
+  "scores": "Dream-1 run: pending; demo: 1.0"
+}
