@@ -1,0 +1,13 @@
+{
+  "title": "Change over a conveyor's guide rails for a new carton",
+  "category": "Impact on jobs",
+  "keywords": ["industrial", "packaging line", "changeover", "conveyor", "guide rails", "setup", "bimanual"],
+  "instruction": "change the conveyor over for the new carton: move both guide rails in so the carton just fits between them, centred on the white line and parallel to it, then put the carton between the rails on the green outfeed mark",
+  "context": "Resetting a packaging line's guide rails for the next product size is a routine changeover for line operators; rails too wide let cartons skew and jam, too tight and they stall.",
+  "setup": "Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. The conveyor's end: a dark bed 26 x 22 x 3 cm tall (26 cm along x) fixed at (30, 0), with a white centre line along y = 0 and a green outfeed mark (4 x 2 cm) at (38, 0). Two aluminium guide rails, bars 24 x 2 x 2.5 cm tall (0.32 kg), lie on the bed along x, centred at (30, 8) and (30, -8) (14 cm between their inner faces). The new product, a cardboard carton 6 x 8 x 6 cm tall (8 cm across the conveyor, 0.3 kg), stands on a grey staging table (10 x 12 x 1 cm) at (17, 25).",
+  "scoring": "Rails set: both lying flat on the bed (underside within 3 mm of it, tilted no more than 3 degrees), parallel to the conveyor (within 2 degrees), the gap between their inner faces 8.2 to 9.2 cm (the carton plus 2 to 12 mm), and centred on the white line (the gap's middle within 5 mm of it), all still: 0.6. Then the carton between the rails on the outfeed mark (upright within 5 degrees, on the bed, its centre within 1.5 cm of the mark, not overlapping either rail, still): 0.4 more. Leaving everything as it starts scores 0; rails set but no test carton scores 0.6.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Lay the rails back at 14 cm apart and the carton back on the staging table.",
+  "fidelity": "Approximate. The conveyor's belt doesn't run (the carton is placed on the outfeed mark, not carried to it), and the guide rails lie loose on the bed instead of being clamped on brackets. The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic).",
+  "scores": "Dream-1 run: pending; demo: 1.0"
+}
