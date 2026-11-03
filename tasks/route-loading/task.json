@@ -1,0 +1,13 @@
+{
+  "title": "Load a trailer in reverse delivery order",
+  "category": "Impact on jobs",
+  "keywords": ["industrial", "logistics", "route loading", "LIFO", "sequence reasoning", "reading a board"],
+  "instruction": "load the parcels into the trailer for the route: the route board shows the stops in delivery order from left to right; the trailer is unloaded from the door, so the first stop's parcels must be nearest the door and the last stop's at the nose",
+  "context": "Delivery vehicles are loaded in reverse stop order so that each stop's freight is at the door when the truck arrives; loading out of sequence forces the driver to unload and reload at every stop.",
+  "setup": "Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. An open-topped trailer is fixed in the middle of the bench: a dark floor from x = 14 (the door, open, facing the arms) to x = 41 (the nose), 10 cm wide inside, with 1 cm walls 5 cm tall at the nose and both sides. A white route board (6 x 12 cm) at (20, 30) shows three coloured squares in a row, from left to right: blue (stop 1), red (stop 2), yellow (stop 3). Five cardboard parcels (4 x 6 x 4 cm, 6 cm along y, 80 g), coloured by stop, wait on grey dock mats: yellow at (20, 17), blue at (28, 17), red at (36, 17), blue at (20, -17) and yellow at (28, -17).",
+  "scoring": "A parcel is loaded when its centre is inside the trailer (between the door line and the nose, between the side walls) and it lies on the floor. A loaded parcel is in sequence when every other loaded parcel for a later stop lies at least 2 cm (centre to centre) nearer the nose than it, and every one for an earlier stop at least 2 cm nearer the door. Score = parcels in sequence / 5. Loading them in route order (blue at the nose) scores 0; 1.0 when both yellow parcels are deepest, then the red, then both blue nearest the door.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Put the parcels back on the dock mats at their positions.",
+  "fidelity": "Approximate. The trailer is a small open-topped box at bench scale, and the parcels' stops are shown by their colour, matched to the route board. The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic).",
+  "scores": "Dream-1 run: pending; demo: 1.0"
+}
