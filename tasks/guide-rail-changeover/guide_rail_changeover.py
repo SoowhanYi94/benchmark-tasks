@@ -57,15 +57,22 @@ def _tilt(quat_xyzw):
     return math.acos(max(-1.0, min(1.0, 1 - 2 * (x * x + y * y))))
 
 
+def _sides(objects):
+    """The two (identical) rails as (left, right) by where they lie, whichever one ends up on which side."""
+    a, b = objects["rail_left"], objects["rail_right"]
+    return (a, b) if a.pos[1] >= b.pos[1] else (b, a)
+
+
 def rail_gap(objects):
     """Between the rails' inner faces (m)."""
-    return float(objects["rail_left"].low[1] - objects["rail_right"].high[1])
+    l, r = _sides(objects)
+    return float(l.low[1] - r.high[1])
 
 
 def rails_set(objects):
     """Both rails flat on the bed, parallel to the conveyor (within 2 degrees), the gap between them 8.2-9.2 cm (the
     carton plus 2-12 mm in all), and centred on the centre line within 5 mm; still."""
-    l, r = objects["rail_left"], objects["rail_right"]
+    l, r = _sides(objects)
     flat = all(o.low[2] <= BED_Z + 0.003 and _yaw(o.quat_xyzw) <= math.radians(2) and _tilt(o.quat_xyzw) <= math.radians(3)
                and o.resting() for o in (l, r))
     g = rail_gap(objects)
@@ -75,7 +82,7 @@ def rails_set(objects):
 
 def carton_at_outfeed(objects):
     """Upright on the bed between the rails, its centre within 1.5 cm of the outfeed mark, still."""
-    o, l, r = objects["carton"], objects["rail_left"], objects["rail_right"]
+    o, (l, r) = objects["carton"], _sides(objects)
     return bool(np.hypot(*(o.pos[:2] - np.array(OUTFEED))) <= 0.015 and o.low[2] <= BED_Z + 0.004
                 and r.high[1] <= o.low[1] + 0.003 and o.high[1] <= l.low[1] + 0.003
                 and _tilt(o.quat_xyzw) <= math.radians(5) and o.resting())
@@ -193,6 +200,8 @@ if __name__ == "__main__":
     assert score(too_tight) == 0.0
     off_centre = dict(done, rail_left=rail(RAIL_SET_Y + 0.008), rail_right=rail(-RAIL_SET_Y + 0.008))
     assert score(off_centre) == 0.0
+    swapped = dict(done, rail_left=done["rail_right"], rail_right=done["rail_left"])  # exploit (council): identical rails swapped
+    assert abs(score(swapped) - 1.0) < 1e-9, score(swapped)
     no_test = dict(done, carton=start["carton"])
     assert abs(score(no_test) - 0.6) < 1e-9
     assert abs(rail_gap(done) - (CARTON[1] + 0.011)) < 1e-9
