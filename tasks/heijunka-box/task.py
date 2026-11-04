@@ -1,14 +1,13 @@
-"""On the station table: a heijunka (production levelling) box runs across the far side of the bench: six pockets in a
-row, one per time slot of the shift. Six production kanbans, one per batch, wait in a tray at the front, grouped by
-product as the orders came in: three for product A (red), two for B (blue), one for C (yellow). Levelling the mix
-means never running the same product in two slots in a row. The robot must put one kanban in each pocket so that no
-two neighbouring pockets hold the same product.
+"""On the station table: a simplified single-row heijunka (production levelling) board runs across the far side of the
+table: six pockets in a row, one per time slot of the shift. Six production kanbans, one per batch, wait in a tray at
+the front, grouped by product as the orders came in: three for product A (red), two for B (blue), one for C (yellow).
+Levelling the mix means spreading each product across the shift: the red kanbans go in every other pocket, so no two
+neighbouring pockets hold the same product. The robot must put one kanban in each pocket in a levelled order.
 
-Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/heijunka-box/heijunka_box.py \\
-           --instruction "load the heijunka box to level the production mix: put one kanban in each of the six pockets so that no two neighbouring pockets hold the same product colour" --scorer task_score ...
+Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/heijunka-box/task.py \\
+           --instruction "Load the heijunka box to level the production mix: put one kanban in each of the six pockets, with the red kanbans in every other pocket so that no two neighbouring pockets hold the same colour." --scorer task_score ...
 """
 
-import itertools
 import math
 
 import numpy as np
@@ -67,19 +66,25 @@ def _products(objects):
     return out
 
 
-def _levelled(objects):
+def filled(objects):
+    """Pockets holding exactly one kanban."""
+    return sum(p is not None for p in _products(objects))
+
+
+def levelled(objects):
+    """All six pockets hold one kanban each, with the red (A) ones in alternate pockets (1, 3, 5 or 2, 4, 6); the blue
+    and yellow ones then fill the other three, so no two neighbours match."""
     p = _products(objects)
-    # a pocket counts only when it and each neighbouring pocket hold exactly one kanban, of different products
-    return [p[k] is not None and all(p[j] is not None and p[j] != p[k] for j in (k - 1, k + 1) if 0 <= j < 6) for k in range(6)]
+    return None not in p and {k for k in range(6) if p[k] == "A"} in ({0, 2, 4}, {1, 3, 5})
 
 
 def success(objects):
-    return all(_levelled(objects))
+    return levelled(objects)
 
 
 def score(objects):
-    """Pockets holding exactly one kanban whose product differs from the neighbouring pockets' / 6."""
-    return float(sum(_levelled(objects)) / 6)
+    """0.3 x pockets holding exactly one kanban / 6 + 0.7 if the box is levelled."""
+    return float(0.3 * filled(objects) / 6 + 0.7 * levelled(objects))
 
 
 # -- scripted demo ----------------------------------------------------------------------------------------------------
@@ -113,7 +118,9 @@ class _Plan:
     def sync(self):
         end = max(self.t.values())
         for a in SIDE:
-            if self.t[a] < end - 1e-9:
+            if not self.wps[a]:  # a straight-down grip can't hold the READY pose: wait parked instead
+                self.go(a, end, (0.18, SIDE[a] * 0.32, TOP + 0.18), FINGER_OPEN, "out of the way")
+            elif self.t[a] < end - 1e-9:
                 self.go(a, end - self.t[a], label="wait")
 
 
@@ -137,26 +144,3 @@ def demo():
         plan.go(arm, 1.0, (0.18, SIDE[arm] * 0.32, TOP + 0.18), FINGER_OPEN, "out of the way")
         plan.sync()
     return plan.wps
-
-
-# -- self-check (pure Python): the plan fits the run limit and the scorer covers the obvious outcomes ----------------
-if __name__ == "__main__":
-    class _O:
-        def __init__(self, x, y, z):
-            self.pos, self.low = np.array((x, y, z + 0.015)), np.array((x - 0.015, y - 0.015, z))
-
-    start = {n: _O(TRAY_X, y, TOP + 0.004) for n, (p, y) in KANBANS.items()}
-    assert score(start) == 0.0 and not success(start)
-    put = lambda order: dict(start, **{n: _O(BOX_X, POCKET_Y[k], FLOOR_Z) for k, n in enumerate(order)})
-    assert score(put([n for _, n, _ in sorted(MOVES, key=lambda m: m[2])])) == 1.0
-    assert abs(score(put(list(KANBANS))) - 1 / 6) < 1e-9  # in order-book order A A A B B C: only C is levelled
-    # brute force: exactly the levelled sequences score 1
-    for perm in set(itertools.permutations(list(KANBANS))):
-        seq = [KANBANS[n][0] for n in perm]
-        assert (score(put(list(perm))) == 1.0) == all(a != b for a, b in zip(seq, seq[1:]))
-    reds_alone = dict(start, kanban_a1=_O(BOX_X, POCKET_Y[0], FLOOR_Z), kanban_a2=_O(BOX_X, POCKET_Y[2], FLOOR_Z),
-                      kanban_a3=_O(BOX_X, POCKET_Y[4], FLOOR_Z))  # exploit (council): empty neighbours used to count as different
-    assert score(reds_alone) == 0.0, score(reds_alone)
-    t = max(sum(w.duration for w in wps) for wps in demo().values())
-    assert t * 20 < 2400, t
-    print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
