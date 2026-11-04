@@ -89,7 +89,7 @@ def _tally(objects):
         target = n0 + NEED[b]
         if NEED[b]:
             correct += min(max(n - n0, 0), NEED[b])
-        wrong += max(0, n - target) + max(0, n0 - n) * (NEED[b] == 0)  # overfilled, or a bin that was fine emptied
+        wrong += max(0, n - target) + max(0, n0 - n)  # overfilled, or parts taken out of any bin
     return correct, wrong
 
 
@@ -184,6 +184,9 @@ if __name__ == "__main__":
     assert abs(score(to_middle) - (5 - 1.5) / 5) < 1e-9
     one_each = dict(start, bulk_part_1=_O(*BINS["bin_left"], BIN_Z), bulk_part_2=_O(*BINS["bin_middle"], BIN_Z), bulk_part_3=_O(*BINS["bin_right"], BIN_Z))
     assert abs(score(one_each) - (2 - 1.5) / 5) < 1e-9
+    left_part = [n for n in PARTS if n.startswith("bin_left")][0]
+    robbed = dict(start, **{left_part: _O(*BINS["bin_right"], BIN_Z)})  # exploit (council): the low bin's own part moved
+    assert score(robbed) == 0.0, score(robbed)
     t = max(sum(w.duration for w in wps) for wps in demo().values())
     assert t * 20 < 2400, t
     print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
