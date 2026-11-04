@@ -3,7 +3,7 @@ row. Before its pressure test every open port must be plugged, except the test p
 the test gauge. One port is already plugged. Plugs wait in a tray at the front, with a spare. The robot must plug the
 open ports and leave the test port open.
 
-Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/port-plugging/port_plugging.py \\
+Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/port-plugging/task.py \\
            --instruction "get the manifold ready for its pressure test: plug every open port, but leave the blue test port open for the gauge" --scorer task_score ...
 """
 
@@ -157,5 +157,5 @@ if __name__ == "__main__":
     swapped = dict(done, plug_fitted=inport("port_1"), plug_1=inport("port_4"))  # exploit (council): the fitted plug swapped out
     assert abs(score(swapped) - (2 - 1.5) / 2) < 1e-9, score(swapped)
     t = max(sum(w.duration for w in wps) for wps in demo().values())
-    assert t * 20 < 2400, t
+    assert t * 20 < 1200, t
     print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
