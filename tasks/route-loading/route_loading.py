@@ -68,28 +68,26 @@ def loaded(name, objects):
     return bool(t["door_x"] <= o.pos[0] <= t["nose_x"] and abs(o.pos[1]) <= t["width"] / 2 and o.low[2] <= FLOOR_Z + 0.02)
 
 
-def in_sequence(name, objects):
-    """Loaded, and every other loaded parcel for a later stop lies deeper (nearer the nose) and every one for an earlier
-    stop nearer the door, by at least DEEPER."""
-    if not loaded(name, objects):
-        return False
-    k, x = ROUTE.index(PARCELS[name][0]), objects[name].pos[0]
-    for q in PARCELS:
-        if q == name or not loaded(q, objects):
-            continue
-        kq, xq = ROUTE.index(PARCELS[q][0]), objects[q].pos[0]
-        if (kq > k and xq < x + DEEPER) or (kq < k and xq > x - DEEPER):
-            return False
-    return True
+def _pairs():
+    """Every pair of parcels for different stops, earlier stop first."""
+    names = list(PARCELS)
+    return [(a, b) for a in names for b in names if ROUTE.index(PARCELS[a][0]) < ROUTE.index(PARCELS[b][0])]
+
+
+def pair_in_order(a, b, objects):
+    """Both loaded, and b (for the later stop) lies at least DEEPER nearer the nose than a."""
+    return bool(loaded(a, objects) and loaded(b, objects) and objects[b].pos[0] >= objects[a].pos[0] + DEEPER)
 
 
 def success(objects):
-    return all(in_sequence(n, objects) for n in PARCELS)
+    return all(loaded(n, objects) for n in PARCELS) and all(pair_in_order(a, b, objects) for a, b in _pairs())
 
 
 def score(objects):
-    """Parcels loaded in sequence (see in_sequence) / 5."""
-    return float(sum(in_sequence(n, objects) for n in PARCELS) / len(PARCELS))
+    """Pairs of parcels for different stops that are both loaded and in the right order (the later stop's parcel at
+    least DEEPER nearer the nose) / all such pairs (8). A parcel left out spoils every pair it belongs to."""
+    pairs = _pairs()
+    return float(sum(pair_in_order(a, b, objects) for a, b in pairs) / len(pairs))
 
 
 # -- scripted demo ----------------------------------------------------------------------------------------------------
@@ -163,6 +161,11 @@ if __name__ == "__main__":
     by_route = dict(start, **{n: _O(x, 0.0, FLOOR_Z) for n, x in zip(["parcel_2", "parcel_4", "parcel_3", "parcel_1", "parcel_5"],
                                                                      [0.38, 0.33, 0.28, 0.23, 0.18])})  # blue at the nose
     assert score(by_route) == 0.0  # every parcel has a wrong-stop parcel on the wrong side of it
+    assert len(_pairs()) == 8
+    yellows_at_door = dict(start, parcel_1=_O(0.18, 0.0, FLOOR_Z), parcel_5=_O(0.23, 0.0, FLOOR_Z))
+    assert score(yellows_at_door) == 0.0  # exploit (council): two parcels alone at the wrong end used to score 0.4
+    one_pair = dict(start, parcel_1=_O(0.38, 0.0, FLOOR_Z), parcel_2=_O(0.18, 0.0, FLOOR_Z))  # a yellow deep, a blue at the door
+    assert score(one_pair) == 1 / 8
     t = max(sum(w.duration for w in wps) for wps in demo().values())
     assert t * 20 < 2400, t
     print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
