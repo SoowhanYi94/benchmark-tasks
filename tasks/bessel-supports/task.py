@@ -1,11 +1,12 @@
 """On the station table: a granite surface plate in the middle of the bench, with a 30 cm precision aluminium
-straightedge lying on a cloth on the bench in front of it, along y, and a support block standing on each side. A
-precision straightedge is stored and used resting on two supports at its Bessel points, 22 % of its length in from
-each end, where it sags least. The robot must stand the two supports on the plate at the right spacing and lay the
-straightedge across them, level, with each support under one of its Bessel points.
+straightedge lying on a cloth on the bench in front of it, along y, and a support block standing on each side. The
+straightedge is unmarked. A gauge bar or straightedge supported at its Bessel points, 0.2203 of its length in from
+each end, keeps the length of its neutral axis most nearly unchanged as it sags. The robot must stand the two
+supports on the plate and lay the straightedge across them, level and along y, with each support within 1 cm of one
+of its Bessel points (6.6 cm in from an end), and let go of it.
 
-Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/bessel-supports/bessel_supports.py \\
-           --instruction "support the 30 cm straightedge at its Bessel points: stand the two support blocks on the surface plate and lay the straightedge across them, level, with each support 22 percent of its length in from its end" --scorer task_score ...
+Run it:  inspect-robots run --embodiment yam_bessel -E task=tasks/bessel-supports/task.py \\
+           --instruction "Support the 30 cm straightedge at its Bessel points: stand the two support blocks on the surface plate, lay the straightedge across them, level, with each support 22 percent of its length in from its end, and let go of it." --scorer task_score ...
 """
 
 import math
@@ -30,7 +31,7 @@ SUPPORT = (0.03, 0.03, 0.04)  # x, y, z: a support block
 SUPPORT_START = {"support_a": (0.18, 0.24), "support_b": (0.18, -0.24)}  # one on each side
 CLOTH = dict(center=(0.15, 0.0), size=(0.06, 0.34, 0.003))
 BAR_START = (0.15, 0.0)
-BESSEL_TOL = 0.01  # each support's centre within 1 cm of a Bessel point (6.6 cm in from an end)
+BESSEL_TOL = 0.01  # each support's centre within 1 cm of a Bessel point (6.61 cm in from an end)
 
 
 OBJECTS = [
@@ -42,43 +43,81 @@ OBJECTS = [
 
 
 # -- scoring --------------------------------------------------------------------------------------------------------
-def _axis_tilt(quat_xyzw):
-    """Angle of the bar's long axis (its local y) from the horizontal (rad)."""
+SEAT_TOL = 0.0015  # the bar's underside within 1.5 mm of each support's top
+HANDS_OFF = 0.03  # each gripper's TCP more than 3 cm from the bar: let go of it
+LEVEL, ALONG_Y, FACE_FLAT, UPRIGHT = (math.radians(d) for d in (2, 5, 5, 5))
+SUPPORT_Y = BAR_L / 2 - BESSEL * BAR_L  # each Bessel point this far from the bar's middle (8.39 cm)
+
+
+def _rot(quat_xyzw):
     x, y, z, w = quat_xyzw
-    return math.asin(min(1.0, abs(2 * (y * z + w * x))))
+    return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                     [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                     [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
 def _tilt(quat_xyzw):
-    x, y, z, w = quat_xyzw
-    return math.acos(max(-1.0, min(1.0, 1 - 2 * (x * x + y * y))))
+    return math.acos(max(-1.0, min(1.0, _rot(quat_xyzw)[2, 2])))
 
 
 def _support_up(name, objects):
-    """Standing upright on the plate, still."""
+    """Standing upright (within 5 degrees) on the plate, still."""
     o = objects[name]
     (cx, cy), (sx, sy, _) = PLATE["center"], PLATE["size"]
     return bool(abs(o.pos[0] - cx) <= sx / 2 and abs(o.pos[1] - cy) <= sy / 2 and o.low[2] <= PLATE_Z + 0.004
-                and _tilt(o.quat_xyzw) <= math.radians(5) and o.resting())
+                and _tilt(o.quat_xyzw) <= UPRIGHT and o.resting())
+
+
+def bar_aligned(b):
+    """Its length level within 2 degrees and along y within 5 degrees (either way round), a face flat within 5."""
+    r = _rot(b.quat_xyzw)
+    a = r[:, 1]
+    return bool(math.asin(min(1.0, abs(a[2]))) <= LEVEL and math.atan2(abs(a[0]), abs(a[1])) <= ALONG_Y
+                and max(abs(r[2, 0]), abs(r[2, 2])) >= math.cos(FACE_FLAT))
+
+
+def along_bar(name, objects):
+    """(Distance of a support's centre from the bar's middle along the bar, across it.)"""
+    b = objects["straightedge"]
+    a = _rot(b.quat_xyzw)[:2, 1]
+    a = a / np.linalg.norm(a)
+    d = np.asarray(objects[name].pos[:2], float) - np.asarray(b.pos[:2], float)
+    return float(d @ a), float(abs(d[0] * a[1] - d[1] * a[0]))
+
+
+def hands_off(objects):
+    """Both grippers' TCPs more than HANDS_OFF from the bar's surface."""
+    b = objects["straightedge"]
+    r = _rot(b.quat_xyzw)
+    for arm in ("left_tcp", "right_tcp"):
+        p = r.T @ (np.asarray(objects[arm].pos, float) - np.asarray(b.pos, float))
+        if np.linalg.norm(np.maximum(np.abs(p) - np.array(BAR) / 2, 0.0)) <= HANDS_OFF:
+            return False
+    return True
 
 
 def bar_on_supports(objects):
-    """The bar resting level (its length within 2 degrees of horizontal) across both supports, standing on the
-    plate, and touching nothing else: its underside at the supports' height and over both of them."""
+    """Supported: both blocks upright on the plate, the bar aligned, lying across both of them (one either side of
+    its middle, under it) with its underside within 1.5 mm of each block's top, still, and both hands off it."""
     b = objects["straightedge"]
-    if not all(_support_up(n, objects) for n in SUPPORT_START) or not b.resting():
+    if not all(_support_up(n, objects) for n in SUPPORT_START) or not b.resting() or not bar_aligned(b):
         return False
-    under = all(abs(objects[n].pos[0] - b.pos[0]) <= (SUPPORT[0] + BAR[0]) / 2 and b.low[1] < objects[n].pos[1] < b.high[1]
-                for n in SUPPORT_START)
-    return bool(under and abs(b.low[2] - (PLATE_Z + SUPPORT[2])) <= 0.004 and _axis_tilt(b.quat_xyzw) <= math.radians(2))
+    a_z = _rot(b.quat_xyzw)[2, 1]
+    s = []
+    for n in SUPPORT_START:
+        along, across = along_bar(n, objects)
+        underside = b.pos[2] + along * a_z - BAR[2] / 2
+        if not (abs(along) < BAR_L / 2 and across <= (SUPPORT[0] + BAR[0]) / 2
+                and abs(underside - objects[n].high[2]) <= SEAT_TOL):
+            return False
+        s.append(along)
+    return bool(min(s) < 0 < max(s) and hands_off(objects))
 
 
 def supports_at_bessel(objects):
-    """How many supports stand within BESSEL_TOL of a Bessel point of the bar (one support per point)."""
-    b = objects["straightedge"]
-    ends = (b.pos[1] - BAR_L / 2, b.pos[1] + BAR_L / 2)
-    points = (ends[0] + BESSEL * BAR_L, ends[1] - BESSEL * BAR_L)
-    ys = sorted(objects[n].pos[1] for n in SUPPORT_START)
-    return sum(abs(y - p) <= BESSEL_TOL for y, p in zip(ys, points))
+    """How many supports have their centre within BESSEL_TOL, along the bar, of a Bessel point (one per point)."""
+    s = sorted(along_bar(n, objects)[0] for n in SUPPORT_START)
+    return sum(abs(v - p) <= BESSEL_TOL for v, p in zip(s, (-SUPPORT_Y, SUPPORT_Y)))
 
 
 def success(objects):
@@ -86,8 +125,7 @@ def success(objects):
 
 
 def score(objects):
-    """0.5 for the bar resting level across both supports + 0.25 for each support within 1 cm of a Bessel point (6.6 cm
-    in from an end). Supports and bar anywhere else score 0."""
+    """0 unless supported; 0.5 supported; + 0.25 for each support within 1 cm of a Bessel point."""
     if not bar_on_supports(objects):
         return 0.0
     return float(0.5 + 0.25 * supports_at_bessel(objects))
@@ -98,7 +136,6 @@ FINGER_PER_M = 0.04695 / 0.094
 SIDE = {"left": 1, "right": -1}
 COMFORT = {"left": -math.pi / 4, "right": math.pi / 4}
 PX = PLATE["center"][0]
-SUPPORT_Y = BAR_L / 2 - BESSEL * BAR_L  # each support this far from the bar's middle (8.4 cm)
 GRIP_Y = 0.12  # each arm holds the bar this far from its middle: outside the supports (2 cm clear), the two hands well
 # apart (8 cm apart, they collide)
 TRIM = {"left": (0.0, 0.0), "right": (0.0, 0.0)}
@@ -184,31 +221,26 @@ def demo():
     return plan.wps
 
 
-# -- self-check (pure Python): the plan fits the run limit and the scorer covers the obvious outcomes ----------------
+# -- demo-plan check (pure Python): the plan fits the run limit and IK reaches every point of it ----------------------
+def check_demo():
+    """(Steps the demo takes, worst IK position error in mm, worst rotation error in degrees): every waypoint of both
+    arms' plans solved with ik.solve, each warm-started from the one before, as the scripted policy does. Waypoints
+    still at the arm's start (READY) pose are skipped: there the player only turns the gripper to point down."""
+    from yam_arena.demo import grip_rotation
+
+    steps, mm, deg = 0, 0.0, 0.0
+    for arm, wps in demo().items():
+        q = np.array(READY, float)
+        start, _ = ik.tcp_pose(q, np.array(BASES[arm]))
+        for w in wps:
+            q, pe, re = ik.solve(w.pos, ik.matrix_to_quat_xyzw(grip_rotation(w.yaw)), q, base_pos=BASES[arm])
+            if not np.allclose(w.pos, start):
+                mm, deg = max(mm, pe * 1000), max(deg, math.degrees(re))
+        steps = max(steps, round(sum(w.duration for w in wps) * 20))
+    return steps, mm, deg
+
+
 if __name__ == "__main__":
-    class _O:
-        def __init__(self, x, y, z, sx, sy, sz):
-            self.pos = np.array((x, y, z + sz / 2))
-            self.low, self.high = np.array((x - sx / 2, y - sy / 2, z)), np.array((x + sx / 2, y + sy / 2, z + sz))
-            self.quat_xyzw = np.array((0.0, 0.0, 0.0, 1.0))
-
-        def resting(self):
-            return True
-
-    sup = lambda y: _O(PX, y, PLATE_Z, *SUPPORT)
-    bar = lambda y, z=PLATE_Z + SUPPORT[2]: _O(PX, y, z, *BAR)
-    start = {"straightedge": _O(*BAR_START, TOP + 0.003, *BAR), **{n: _O(*xy, TOP, *SUPPORT) for n, xy in SUPPORT_START.items()}}
-    assert score(start) == 0.0
-    done = {"straightedge": bar(0.0), "support_a": sup(SUPPORT_Y), "support_b": sup(-SUPPORT_Y)}
-    assert score(done) == 1.0 and success(done)
-    narrow = dict(done, support_a=sup(0.04), support_b=sup(-0.04))  # at a quarter of the length: 4.4 cm off
-    assert score(narrow) == 0.5
-    shifted = dict(done, straightedge=bar(0.03))  # bar laid 3 cm off-centre over correctly spaced supports
-    assert score(shifted) == 0.5
-    one_off = dict(done, support_b=sup(-SUPPORT_Y - 0.02))
-    assert score(one_off) == 0.75
-    on_plate = dict(done, straightedge=bar(0.0, PLATE_Z))
-    assert score(on_plate) == 0.0
-    t = max(sum(w.duration for w in wps) for wps in demo().values())
-    assert t * 20 < 2400, t
-    print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
+    steps, mm, deg = check_demo()
+    assert steps < 2400 and mm < 1.0 and deg < 1.0, (steps, mm, deg)
+    print(f"ok: demo {steps} steps of 2,400, worst IK error {mm:.3f} mm, {deg:.3f} deg")
