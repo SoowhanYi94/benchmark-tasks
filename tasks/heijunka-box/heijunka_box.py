@@ -69,7 +69,8 @@ def _products(objects):
 
 def _levelled(objects):
     p = _products(objects)
-    return [p[k] is not None and all(p[j] != p[k] for j in (k - 1, k + 1) if 0 <= j < 6) for k in range(6)]
+    # a pocket counts only when it and each neighbouring pocket hold exactly one kanban, of different products
+    return [p[k] is not None and all(p[j] is not None and p[j] != p[k] for j in (k - 1, k + 1) if 0 <= j < 6) for k in range(6)]
 
 
 def success(objects):
@@ -153,6 +154,9 @@ if __name__ == "__main__":
     for perm in set(itertools.permutations(list(KANBANS))):
         seq = [KANBANS[n][0] for n in perm]
         assert (score(put(list(perm))) == 1.0) == all(a != b for a, b in zip(seq, seq[1:]))
+    reds_alone = dict(start, kanban_a1=_O(BOX_X, POCKET_Y[0], FLOOR_Z), kanban_a2=_O(BOX_X, POCKET_Y[2], FLOOR_Z),
+                      kanban_a3=_O(BOX_X, POCKET_Y[4], FLOOR_Z))  # exploit (council): empty neighbours used to count as different
+    assert score(reds_alone) == 0.0, score(reds_alone)
     t = max(sum(w.duration for w in wps) for wps in demo().values())
     assert t * 20 < 2400, t
     print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
