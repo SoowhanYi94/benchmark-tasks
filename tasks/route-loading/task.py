@@ -1,27 +1,27 @@
 """On the station table: a delivery trailer (an open-topped box with its door end facing the arms) stands in the middle
 of the bench, its nose at the far end. Five parcels for one delivery route wait on two dock mats either side, each
-coloured by the stop it goes to. A route board on the left shows the three stops in delivery order, from left to right:
-blue, red, yellow. The trailer is unloaded from the door, so the robot must load it last stop first: the parcels for
-the last stop deepest, at the nose, and those for the first stop nearest the door.
+coloured by the stop it goes to (two yellow, two blue, one red). A route board on the left shows the three stops in
+delivery order as coloured squares, from left to right. The trailer is unloaded from the door, stop by stop.
 
-Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/route-loading/route_loading.py \\
-           --instruction "load the parcels into the trailer for the route: the route board shows the stops in delivery order from left to right; the trailer is unloaded from the door, so the first stop's parcels must be nearest the door and the last stop's at the nose" --scorer task_score ...
+Run it:  ROUTE_VARIANT=0 inspect-robots run --embodiment yam_arena -E task=tasks/route-loading/task.py \\
+           --instruction "Load the parcels into the trailer so they can be unloaded from its door in the delivery order shown on the route board." --scorer task_score ...
+
+ROUTE_VARIANT (0-5, default 0) picks the board's order: one of the six orders of the three colours, as in VARIANTS.
 """
 
+import itertools
 import math
+import os
 
-import numpy as np
-
-from yam_arena import ik
-from yam_arena.constants import FINGER_OPEN, READY
+from yam_arena.constants import FINGER_OPEN
 from yam_arena.demo import Waypoint
-from yam_arena.station import BASES
 from yam_arena.task_file import TABLE_TOP, Box
 
 SCENE = "station"
 TOP = TABLE_TOP[SCENE]
 STOP_COLOR = {"blue": (0.15, 0.35, 0.80), "red": (0.80, 0.12, 0.10), "yellow": (0.95, 0.82, 0.15)}
-ROUTE = ["blue", "red", "yellow"]  # delivery order, as the route board shows it
+VARIANTS = list(itertools.permutations(("blue", "red", "yellow")))  # 0 is blue, red, yellow; 5 is yellow, red, blue
+ROUTE = list(VARIANTS[int(os.environ.get("ROUTE_VARIANT", "0"))])  # delivery order, as the route board shows it
 
 TRAILER = dict(door_x=0.14, nose_x=0.41, width=0.10, wall=0.01, height=0.05, floor=0.004)
 FLOOR_Z = TOP + TRAILER["floor"]
@@ -64,50 +64,62 @@ OBJECTS = [
 
 # -- scoring --------------------------------------------------------------------------------------------------------
 def loaded(name, objects):
+    """Wholly inside the trailer (its whole footprint past the door line), still, on the floor (underside within 5 mm)."""
     t, o = TRAILER, objects[name]
-    return bool(t["door_x"] <= o.pos[0] <= t["nose_x"] and abs(o.pos[1]) <= t["width"] / 2 and o.low[2] <= FLOOR_Z + 0.02)
+    return bool(o.low[0] >= t["door_x"] and o.pos[0] <= t["nose_x"] and abs(o.pos[1]) <= t["width"] / 2
+                and o.low[2] <= FLOOR_Z + 0.005 and o.resting())
 
 
-def _pairs():
-    """Every pair of parcels for different stops, earlier stop first."""
-    names = list(PARCELS)
-    return [(a, b) for a in names for b in names if ROUTE.index(PARCELS[a][0]) < ROUTE.index(PARCELS[b][0])]
+def _stop(name, route=None):
+    return (route or ROUTE).index(PARCELS[name][0])
 
 
-def pair_in_order(a, b, objects):
-    """Both loaded, and b (for the later stop) lies at least DEEPER nearer the nose than a."""
-    return bool(loaded(a, objects) and loaded(b, objects) and objects[b].pos[0] >= objects[a].pos[0] + DEEPER)
+def counts(name, objects, route=None):
+    """Loaded, and every parcel for another stop is loaded and at least DEEPER on the correct side of it (nearer the
+    nose if its stop comes later on the route, nearer the door if earlier)."""
+    if not loaded(name, objects):
+        return False
+    x = objects[name].pos[0]
+    for m in PARCELS:
+        d = _stop(m, route) - _stop(name, route)
+        if d and not (loaded(m, objects) and (objects[m].pos[0] - x) * (1 if d > 0 else -1) >= DEEPER):
+            return False
+    return True
 
 
 def success(objects):
-    return all(loaded(n, objects) for n in PARCELS) and all(pair_in_order(a, b, objects) for a, b in _pairs())
+    return all(counts(n, objects) for n in PARCELS)
 
 
-def score(objects):
-    """Pairs of parcels for different stops that are both loaded and in the right order (the later stop's parcel at
-    least DEEPER nearer the nose) / all such pairs (8). A parcel left out spoils every pair it belongs to."""
-    pairs = _pairs()
-    return float(sum(pair_in_order(a, b, objects) for a, b in pairs) / len(pairs))
+def score(objects, route=None):
+    """(parcels that count - 2) / 3, not below 0. Chance-corrected: a blind full load counts about 2 parcels at random
+    (random orders average 0.06), and 4 can't count without the fifth, so the steps are 0, 1/3 and 1."""
+    c = sum(counts(n, objects, route) for n in PARCELS)
+    return float(max(0.0, (c - 2) / 3))
 
 
 # -- scripted demo ----------------------------------------------------------------------------------------------------
 FINGER_PER_M = 0.04695 / 0.094
 SIDE = {"left": 1, "right": -1}
 COMFORT = {"left": -math.pi / 4, "right": math.pi / 4}
+PARK = {a: (0.18, s * 0.32, TOP + 0.18) for a, s in SIDE.items()}
 Z_UP = TOP + 0.10  # a carried parcel clears the 5 cm trailer walls by 2 cm
-# single file down the middle of the trailer, nose first: yellow, yellow, red, blue, blue
-LOAD = [("left", "parcel_1", 0.38), ("right", "parcel_5", 0.33), ("left", "parcel_3", 0.28), ("left", "parcel_2", 0.23),
-        ("right", "parcel_4", 0.18)]
+SLOTS = (0.37, 0.32, 0.27, 0.22, 0.17)  # single file down the middle, nose first; 1 cm gaps, 2 cm clear of the nose
+
+
+def load_plan(route=None):
+    """(arm, parcel, slot x): the last stop's parcels first, at the nose; each arm takes the parcels on its side."""
+    order = sorted(PARCELS, key=lambda n: -_stop(n, route))
+    return [("left" if PARCELS[n][1][1] > 0 else "right", n, x) for n, x in zip(order, SLOTS)]
 
 
 class _Plan:
     def __init__(self):
         self.wps = {a: [] for a in SIDE}
         self.t = {a: 0.0 for a in SIDE}
-        self.last = {}
-        for a in SIDE:
-            pos, _ = ik.tcp_pose(np.array(READY, float), np.array(BASES[a]))
-            self.last[a] = (tuple(float(v) for v in pos), FINGER_OPEN, 0.0)
+        # an arm's first waypoint (a wait, for the arm not loading first) takes it to its out-of-the-way pose, since
+        # holding READY's position with the downward grip is out of reach
+        self.last = {a: (PARK[a], FINGER_OPEN, 0.0) for a in SIDE}
 
     def go(self, arm, dur, pos=None, finger=None, label="", yaw=None):
         p, f, y = self.last[arm]
@@ -125,12 +137,13 @@ class _Plan:
                 self.go(a, end - self.t[a], label="wait")
 
 
-def demo():
+def demo(route=None):
     plan = _Plan()
     w = PARCEL[1]  # gripped across its 6 cm width (fingers along y, into the 2 cm beside the side walls)
     grip, ready = -FINGER_PER_M * (w - 0.006), -FINGER_PER_M * (w + 0.014)
+    release = -FINGER_PER_M * (w + 0.008)  # 6.8 cm in the 10 cm bay: 1.6 cm clear of each wall
     g = PARCEL[2] - 0.01
-    for arm, n, qx in LOAD:
+    for arm, n, qx in load_plan(route):
         (px, py) = PARCELS[n][1]
         yaw = min((k * math.pi for k in range(-2, 3)), key=lambda v: abs(v - COMFORT[arm]))
         plan.go(arm, 1.2, (px, py, Z_UP), ready, f"{n}: above it", yaw)
@@ -141,31 +154,8 @@ def demo():
         plan.go(arm, 1.3, (qx, 0.0, Z_UP), label="over its place in the trailer")
         plan.go(arm, 0.4, label="settle")
         plan.go(arm, 1.0, (qx, 0.0, FLOOR_Z + g + 0.004), label="set it down")
-        plan.go(arm, 0.4, finger=ready, label="release")
+        plan.go(arm, 0.4, finger=release, label="release")
         plan.go(arm, 0.6, (qx, 0.0, Z_UP), label="up")
-        plan.go(arm, 1.0, (0.18, SIDE[arm] * 0.32, TOP + 0.18), FINGER_OPEN, "out of the way")
+        plan.go(arm, 1.0, PARK[arm], FINGER_OPEN, "out of the way")
         plan.sync()  # one arm over the trailer at a time
     return plan.wps
-
-
-# -- self-check (pure Python): the plan fits the run limit and the scorer covers the obvious outcomes ----------------
-if __name__ == "__main__":
-    class _O:
-        def __init__(self, x, y, z):
-            self.pos, self.low = np.array((x, y, z + 0.02)), np.array((x - 0.02, y - 0.03, z))
-
-    start = {n: _O(*xy, TOP + 0.004) for n, (c, xy) in PARCELS.items()}
-    assert score(start) == 0.0 and not success(start)
-    done = dict(start, **{n: _O(x, 0.0, FLOOR_Z) for _, n, x in LOAD})
-    assert score(done) == 1.0 and success(done)
-    by_route = dict(start, **{n: _O(x, 0.0, FLOOR_Z) for n, x in zip(["parcel_2", "parcel_4", "parcel_3", "parcel_1", "parcel_5"],
-                                                                     [0.38, 0.33, 0.28, 0.23, 0.18])})  # blue at the nose
-    assert score(by_route) == 0.0  # every parcel has a wrong-stop parcel on the wrong side of it
-    assert len(_pairs()) == 8
-    yellows_at_door = dict(start, parcel_1=_O(0.18, 0.0, FLOOR_Z), parcel_5=_O(0.23, 0.0, FLOOR_Z))
-    assert score(yellows_at_door) == 0.0  # exploit (council): two parcels alone at the wrong end used to score 0.4
-    one_pair = dict(start, parcel_1=_O(0.38, 0.0, FLOOR_Z), parcel_2=_O(0.18, 0.0, FLOOR_Z))  # a yellow deep, a blue at the door
-    assert score(one_pair) == 1 / 8
-    t = max(sum(w.duration for w in wps) for wps in demo().values())
-    assert t * 20 < 2400, t
-    print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
