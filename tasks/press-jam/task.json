@@ -17,5 +17,6 @@
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Set the jammed blank back across the nest turned 45 degrees, the next blank back on the infeed plate, and the selector at AUTO.",
   "fidelity": "Approximate. There is no press stroke or lockout: the mode selector is a handle sliding between rails (a real one is usually a key switch), nothing stops the press if the order is broken, and the score cap stands in for that. The die plate, nest and blanks are plain blocks. The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic).",
-  "scores": "Dream-1 run: 0.0; demo: 1.0"
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-GYN7UB"
 }
