@@ -1,13 +1,20 @@
 {
   "title": "Support a straightedge at its Bessel points",
   "category": "Impact on jobs",
-  "keywords": ["industrial", "metrology", "precision tools", "Bessel points", "measurement", "bimanual"],
+  "keywords": [
+    "industrial",
+    "metrology",
+    "precision tools",
+    "Bessel points",
+    "measurement",
+    "bimanual"
+  ],
   "instruction": "support the 30 cm straightedge at its Bessel points: stand the two support blocks on the surface plate and lay the straightedge across them, level, with each support 22 percent of its length in from its end",
-  "context": "Precision straightedges and gauge bars are supported at their Bessel points (22 % of the length in from each end), where they sag least; supporting one anywhere else bends it enough to spoil a flatness check, so toolroom and quality-lab staff are trained to place the supports by measuring.",
-  "setup": "Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. A black granite surface plate (16 x 40 x 2 cm tall, 40 cm along y) is fixed at (29, 0). An aluminium straightedge, a bar 2.5 x 30 x 2.5 cm (30 cm along y, 0.5 kg), lies on a red cloth (6 x 34 x 0.3 cm) on the table at (15, 0). Two blue support blocks (3 x 3 x 4 cm tall, 0.25 kg) stand on the table at (18, 24) and (18, -24).",
-  "scoring": "The straightedge counts as supported when both blocks stand upright (within 5 degrees) on the plate, and it rests on both (its underside at their height, within 4 mm, over each of them) with its length level within 2 degrees, all still. Its Bessel points are 6.6 cm in from each of its ends (22 % of 30 cm). Supported: 0.5, plus 0.25 for each support whose centre is within 1 cm of a Bessel point (one support per point). Anything else scores 0. 1.0 when the straightedge rests level on two supports, each within 1 cm of a Bessel point; supports at the wrong spacing score 0.5.",
+  "context": "Precision straightedges and gauge bars are supported at their Bessel points (22 % of the length in from each end), where they sag least; supporting one anywhere else bends it enough to spoil a flatness check, so toolroom and quality-lab staff are trained to place the supports by measuring. It measures bimanual handling of a long part and placing supports at computed points (22 % in from each end).",
+  "setup": "The table top is 74.75 cm above the floor. Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. A black granite surface plate (16 x 40 x 2 cm tall, 40 cm along y) is fixed at (29, 0). An aluminium straightedge, a bar 2.5 x 30 x 2.5 cm (30 cm along y, 0.5 kg), lies on a red cloth (6 x 34 x 0.3 cm) on the table at (15, 0). Two blue support blocks (3 x 3 x 4 cm tall, 0.25 kg) stand on the table at (18, 24) and (18, -24).",
+  "scoring": "The straightedge counts as supported when both blocks stand upright (within 5 degrees) on the plate, and it rests on both (its underside at their height, within 4 mm, over each of them) with its length level within 2 degrees, all still. Its Bessel points are 6.6 cm in from each of its ends (22 % of 30 cm). Supported: 0.5, plus 0.25 for each support whose centre is within 1 cm of a Bessel point (one support per point). Anything else scores 0. 1.0 when the straightedge rests level on two supports, each within 1 cm of a Bessel point; supports at the wrong spacing score 0.5. On real arms, measure each support's distance from the straightedge's ends with a tape measure (read to ±2 mm) and check the straightedge is level with a spirit level.",
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Lay the straightedge back on its cloth and stand the support blocks back at their positions.",
-  "fidelity": "Approximate. The straightedge is a rigid bar: it doesn't actually sag in the simulator, so where it is supported is scored from the geometry, not from a measured deflection. The support blocks stand in for adjustable supports. The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic).",
+  "fidelity": "Approximate. The straightedge is a rigid bar: it doesn't actually sag in the simulator, so where it is supported is scored from the geometry, not from a measured deflection. The support blocks stand in for adjustable supports. The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic). The straightedge is a rigid bar that does not sag; a real one sags, which is what the Bessel points minimise.",
   "scores": "Dream-1 run: pending; demo: 1.0"
 }
