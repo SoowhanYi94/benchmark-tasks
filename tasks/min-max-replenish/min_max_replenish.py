@@ -1,7 +1,7 @@
 """On the station table: three line-side parts bins stand in a row on the far side of the bench (left, middle, right),
 each run on a min/max rule: when a bin holds fewer than its minimum of 2 parts it is refilled up to its maximum of 3;
 a bin at or above its minimum is left alone. Now the left bin holds 1 part, the middle bin 3 and the right bin none.
-A bulk tote at the front holds six more of the same parts. The robot must replenish the bins by the rule from the bulk
+A bulk tote at the front holds six more of the same parts, 3/4-inch drive sockets. The robot must replenish the bins by the rule from the bulk
 tote.
 
 Run it:  inspect-robots run --embodiment yam_arena -E task=tasks/min-max-replenish/min_max_replenish.py \\
@@ -16,19 +16,35 @@ from yam_arena import ik
 from yam_arena.constants import FINGER_OPEN, READY
 from yam_arena.demo import Waypoint
 from yam_arena.station import BASES
-from yam_arena.task_file import TABLE_TOP, Box
+from yam_arena.task_file import TABLE_TOP, Asset, Box
+
+SIMREADY = "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.1/Isaac/SimReady/Industrial/"
+SOCKET_MODEL = "sr_socket_3_4in"  # NVIDIA SimReady Socket_3_4in_A01: a 3/4-inch drive socket, 3.0 cm across, 4.7 cm tall
+
+
+def _register_simready():
+    """Make the SimReady model available to `Asset` under SOCKET_MODEL (the task file registers it; no simulator change)."""
+    from isaaclab_arena.assets.registries import AssetRegistry
+
+    url = SIMREADY + "Tools/Hand/Socket_3_4in_A01/sm_handTool_socket_3_4in_a01_01.usd"
+    r = AssetRegistry()
+    if not r.is_registered(SOCKET_MODEL, ensure_loaded=False):
+        r.register(type(SOCKET_MODEL, (), {"name": SOCKET_MODEL, "tags": ["object"], "usd_path": url}), SOCKET_MODEL)
+
+
+_register_simready()
 
 SCENE = "station"
 TOP = TABLE_TOP[SCENE]
 
 MIN, MAX = 2, 3
 BINS = {"bin_left": (0.33, 0.14), "bin_middle": (0.33, 0.0), "bin_right": (0.33, -0.14)}
-BIN_IN, BIN_WALL, BIN_H, BIN_FLOOR = 0.09, 0.01, 0.03, 0.004
+BIN_IN, BIN_WALL, BIN_H, BIN_FLOOR = 0.09, 0.01, 0.03, 0.0008  # floor pad under 1 mm: library models spawn on the table
 BIN_Z = TOP + BIN_FLOOR
 SLOTS = [(-0.022, -0.022), (-0.022, 0.022), (0.022, 0.0)]  # three places in a bin
-PART = (0.03, 0.03, 0.03)  # nylon spacer blocks, 50 g
+PART = (0.03, 0.03, 0.047)  # the socket: 3.0 cm across, 4.7 cm tall, chrome-vanadium steel, 90 g
 START_COUNT = {"bin_left": 1, "bin_middle": 3, "bin_right": 0}
-BULK = dict(center=(0.17, 0.0), inner=(0.06, 0.30), wall=0.01, height=0.02, floor=0.004)
+BULK = dict(center=(0.17, 0.0), inner=(0.06, 0.30), wall=0.01, height=0.02, floor=0.0008)
 BULK_Z = TOP + BULK["floor"]
 BULK_Y = [-0.125, -0.075, -0.025, 0.025, 0.075, 0.125]
 WRONG_PENALTY = 1.5
@@ -55,7 +71,7 @@ def _box5(name, cx, cy, ix, iy, w, h, f, c):
 OBJECTS = [
     *[o for b, (x, y) in BINS.items() for o in _box5(b, x, y, BIN_IN, BIN_IN, BIN_WALL, BIN_H, BIN_FLOOR, (0.20, 0.35, 0.60))],
     *_box5("bulk_tote", *BULK["center"], *BULK["inner"], BULK["wall"], BULK["height"], BULK["floor"], (0.30, 0.31, 0.33)),
-    *[Box(n, pos=(x, y, z + PART[2] / 2), size=PART, mass=0.05, color=(0.95, 0.85, 0.20)) for n, (x, y, z) in PARTS.items()],
+    *[Asset(n, asset=SOCKET_MODEL, xy=(x, y), extent=PART[0], mass=0.09) for n, (x, y, z) in PARTS.items()],
 ]
 
 

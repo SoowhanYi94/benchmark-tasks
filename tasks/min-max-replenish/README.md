@@ -6,7 +6,9 @@ tote, and leave the middle bin alone. Each part beyond a bin's maximum, or taken
 ones.
 
 The task file is [`min_max_replenish.py`](min_max_replenish.py) (scene, scoring and scripted demo). Setup, scoring
-and fidelity are in [`task.json`](task.json). Everything in the scene is a simulator primitive (boxes).
+and fidelity are in [`task.json`](task.json). The sockets are an NVIDIA SimReady model; the bins and tote are simulator boxes.
+
+**Assets:** Socket_3_4in_A01, from NVIDIA SimReady (Isaac Sim 6.1 asset library), CC BY 4.0. The task file registers it at load time and Isaac Sim fetches it from NVIDIA's asset server, so the first run needs internet access.
 
 ## Requirements
 
@@ -38,11 +40,11 @@ self-check of the scorer without the simulator.
 
 - **Seeds:** none needed. `-E object_jitter=0` keeps the fixed layout, which the scripted demo (open loop) needs and
   the setup describes; the default seed is 0.
-- **Runtime per trial:** the scripted demo succeeds after 833 steps (42 s simulated), about 2 minutes on an RTX 4070
+- **Runtime per trial:** the scripted demo succeeds after 830 steps (42 s simulated), about 2 minutes on an RTX 4070
   once Isaac Sim has started. A Dream-1 trial runs up to 2,400 steps.
 
 ## How the demo does it
 
-The left arm moves two blocks from the bulk tote into the left bin and the right arm three into the right bin, one at a
-time, each let go 2.2 cm above the bin floor so the finger pads clear the blocks already there. The middle bin is not
+The left arm moves two sockets from the bulk tote into the left bin and the right arm three into the right bin, one at a
+time, each let go 2.2 cm above the bin floor so the finger pads clear the sockets already there. The middle bin is not
 touched.
