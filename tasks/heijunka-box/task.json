@@ -1,13 +1,20 @@
 {
   "title": "Level a production mix in a heijunka box",
   "category": "Impact on jobs",
-  "keywords": ["industrial", "lean manufacturing", "heijunka", "production levelling", "constraint satisfaction", "sequencing"],
+  "keywords": [
+    "industrial",
+    "lean manufacturing",
+    "heijunka",
+    "production levelling",
+    "constraint satisfaction",
+    "sequencing"
+  ],
   "instruction": "load the heijunka box to level the production mix: put one kanban in each of the six pockets so that no two neighbouring pockets hold the same product colour",
-  "context": "Lean plants level the product mix over a shift (heijunka) instead of running each product in one batch, which smooths demand on upstream processes and inventory; the heijunka box holds one production kanban per time slot.",
-  "setup": "Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. A dark heijunka box is fixed across the far side of the bench at x = 34: six square pockets, 5 cm inside, in a row along y at y = 15, 9, 3, -3, -9 and -15, divided by 1 cm walls 1.5 cm tall. Six kanbans (3 cm cubes in their holders, 40 g) stand on a grey tray (5 x 30 cm) at x = 18, grouped by product: red (product A) at y = 12.5, 7.5 and 2.5; blue (B) at -2.5 and -7.5; yellow (C) at -12.5.",
-  "scoring": "A pocket counts when it holds exactly one kanban (centre inside the pocket, on its floor) whose colour differs from that of the kanban in each neighbouring pocket. Score = pockets that count / 6. The start scores 0; loading them in tray order (red, red, red, blue, blue, yellow) scores 0.17; 1.0 for any levelled sequence, for example red, blue, red, yellow, red, blue.",
+  "context": "Lean plants level the product mix over a shift (heijunka) instead of running each product in one batch, which smooths demand on upstream processes and inventory; the heijunka box holds one production kanban per time slot. It measures constraint satisfaction: any sequence with no product in two neighbouring slots scores full, so the model must plan rather than copy an order.",
+  "setup": "The table top is 74.75 cm above the floor. Two arms 61 cm apart on a table; positions are from the midpoint between the two arm bases, x forward and y to the left, in cm. A dark heijunka box is fixed across the far side of the bench at x = 34: six square pockets, 5 cm inside, in a row along y at y = 15, 9, 3, -3, -9 and -15, divided by 1 cm walls 1.5 cm tall. Six kanbans (3 cm cubes in their holders, 40 g) stand on a grey tray (5 x 30 cm) at x = 18, grouped by product: red (product A) at y = 12.5, 7.5 and 2.5; blue (B) at -2.5 and -7.5; yellow (C) at -12.5.",
+  "scoring": "A pocket counts when it holds exactly one kanban (centre inside the pocket, on its floor) whose colour differs from that of the kanban in each neighbouring pocket. Score = pockets that count / 6. The start scores 0; loading them in tray order (red, red, red, blue, blue, yellow) scores 0.17; 1.0 for any levelled sequence, for example red, blue, red, yellow, red, blue. On real arms, read each pocket's colour from a top-down photo of the end state.",
   "run_limit": "2,400 steps (2 minutes at 20 Hz)",
   "reset_notes": "Stand the kanbans back on the tray in their groups.",
-  "fidelity": "Approximate. The kanbans are coloured blocks rather than cards in holders, and the heijunka box is a single row of pockets (a real one has a row per product family). The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic).",
+  "fidelity": "Approximate. The kanbans are coloured blocks rather than cards in holders, and the heijunka box is a single row of pockets (a real one has a row per product family). The simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic). Kanbans are coloured blocks rather than cards in holders, so they are easier to grip than real cards.",
   "scores": "Dream-1 run: pending; demo: 1.0"
 }
