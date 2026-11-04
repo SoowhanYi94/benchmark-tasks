@@ -121,15 +121,30 @@ def blank_seated(objects):
 
 
 # The order matters: the score remembers whether the jammed blank was touched while the press was not in SETUP (in the
-# real world: from the trial video). It resets whenever the scene is back in its starting state.
-_trial = {"violated": False}
+# real world: from the trial video). It forgets only at a new episode (see _new_episode).
+FREE = ("selector_handle", "jammed_blank", "next_blank")
+_trial = {"violated": False, "start": None, "last": None}
+
+
+def _new_episode(objects):
+    """A reset: every free object jumps back to where it started within one step (a robot putting things back by hand
+    never looks like that)."""
+    pos = {n: np.array(objects[n].pos[:3], float) for n in FREE}
+    start, last = _trial["start"], _trial["last"]
+    _trial["last"] = pos
+    if start is None:
+        _trial["start"] = pos
+        return True
+    at_start = all(np.linalg.norm(pos[n] - start[n]) <= 0.003 for n in FREE)
+    jumped = last is not None and any(np.linalg.norm(pos[n] - last[n]) > 0.03 for n in FREE)
+    return at_start and jumped
 
 
 def _update(objects):
     j = objects["jammed_blank"]
-    jam_untouched = np.hypot(*(j.pos[:2] - np.array(DIE["center"]))) < 0.003 and abs(j.low[2] - (DIE_Z + NEST_H)) < 0.003
-    if jam_untouched and selector_at(AUTO_X, objects) and abs(objects["selector_handle"].pos[0] - AUTO_X) < 0.003:
+    if _new_episode(objects):
         _trial["violated"] = False
+    jam_untouched = np.hypot(*(j.pos[:2] - np.array(DIE["center"]))) < 0.003 and abs(j.low[2] - (DIE_Z + NEST_H)) < 0.003
     if not jam_untouched and not selector_at(SETUP_X, objects) and not jam_cleared(objects):
         _trial["violated"] = True
 
@@ -257,6 +272,13 @@ if __name__ == "__main__":
     assert abs(score(done) - 0.1) < 1e-9
     score(start)
     assert abs(score(dict(done, next_blank=_O(*dc, DIE_Z, math.radians(30)))) - 0.3) < 1e-9  # seated crooked
+    # exploit (council): touch the jam in AUTO, set it back within 3 mm, then do it properly
+    score(start)
+    score(dict(start, jammed_blank=_O(dc[0] + 0.01, dc[1], DIE_Z + NEST_H + 0.01, math.pi / 4)))  # nudged in AUTO
+    score(dict(start, jammed_blank=_O(dc[0] + 0.001, dc[1], DIE_Z + NEST_H, math.pi / 4)))  # set back by hand
+    score(setup)
+    score(dict(setup, jammed_blank=_O(*REJECT["center"], TOP + 0.004)))
+    assert abs(score(done) - 0.1) < 1e-9, "touching the jam in AUTO must stay capped"
     t = max(sum(w.duration for w in wps) for wps in demo().values())
     assert t * 20 < 2400, t
     print(f"ok: demo {t:.1f} s ({t * 20:.0f} steps)")
