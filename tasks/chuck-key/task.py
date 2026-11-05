@@ -4,7 +4,7 @@ right arm into the headstock) and the chuck's face toward the right arm. The jaw
 its holder, an orange block on the left. The socket for the key is on top of the chuck: the key goes in vertically and
 turning it anticlockwise, seen from above, closes all three jaws together. The instruction:
 
-Put the bar into the lathe chuck with 50 mm sticking out of the jaws, tighten the jaws on it with the chuck key, then take the key out of the chuck and stand it back in its holder.
+Chuck the bar in the lathe with 50 mm sticking out of the jaws, tighten it with the chuck key, and leave the lathe ready to start with the key put away in its holder.
 
 Tight means the key turned at least 60 degrees after all three jaws touched the bar, and the bar holds: once the key
 is out of the chuck and every hand is 6 cm or more from the bar, the judge pulls the bar straight out of the chuck with

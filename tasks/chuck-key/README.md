@@ -33,13 +33,13 @@ From this folder:
 # Dream-1
 inspect-robots run --embodiment yam_chuck --policy dream \
   -E task="$PWD/task.py" -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Put the bar into the lathe chuck with 50 mm sticking out of the jaws, tighten the jaws on it with the chuck key, then take the key out of the chuck and stand it back in its holder." \
+  --instruction "Chuck the bar in the lathe with 50 mm sticking out of the jaws, tighten it with the chuck key, and leave the lathe ready to start with the key put away in its holder." \
   --scorer task_score --max-steps 2400 --store-frames --log-dir logs/dream
 
 # The scripted demo (reaches 1.0)
 inspect-robots run --embodiment yam_chuck --policy yam_scripted \
   -E task="$PWD/task.py" -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Put the bar into the lathe chuck with 50 mm sticking out of the jaws, tighten the jaws on it with the chuck key, then take the key out of the chuck and stand it back in its holder." \
+  --instruction "Chuck the bar in the lathe with 50 mm sticking out of the jaws, tighten it with the chuck key, and leave the lathe ready to start with the key put away in its holder." \
   --scorer task_score --max-steps 2400 --store-frames --log-dir logs/demo
 ```
 
