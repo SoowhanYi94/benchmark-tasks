@@ -36,7 +36,7 @@ Isaac Sim 6.1), installed with its `setup.sh`, on an NVIDIA RTX GPU. Start each 
 
 ## Run a trial
 
-From this folder, once per layout (`GAUGE_LAYOUT` = `A`, `B` or `C`; `A` if unset), one trial per run:
+From this folder, once per lot (`GAUGE_LAYOUT` = `A`, `B` or `C`; `A` if unset), one trial per run:
 
 ```bash
 # Dream-1
@@ -56,19 +56,19 @@ The run prints `task_score` at the end; the episode ends early, with `terminatio
 has been in its tray for 1 s. Videos: `inspect-robots video <log>.json`. `GAUGE_DEBUG=1` prints the blocks, the
 fingertips and the score four times a second. `python -m pytest -q test_score.py` tests the scorer against every
 outcome in the scoring rules and the exploits we found (held, moving, stacked or dropped blocks, one-bar gauging,
-blind play, memorising one layout's answer by place), checks every layout's scene, and checks that each layout's
+blind play, the tag without the sort), checks every lot's scene, and checks that each layout's
 demo fits the run limit and that IK reaches every waypoint. `python task.py` runs the demo-plan and IK check alone
-(for `GAUGE_LAYOUT`'s layout). Neither needs the simulator.
+(for `GAUGE_LAYOUT`'s lot). Neither needs the simulator.
 
-- **Seeds:** none needed. `-E object_jitter=0` keeps the fixed layout, which the scripted demo (open loop) needs and
-  the setup describes; the default seed is 0. The layout is set by `GAUGE_LAYOUT`, not by the seed.
-- **Runtime per trial:** the scripted demo's plan is 2,056 steps (103 s simulated) in every layout, and it succeeds 1 s after the
-  last block is let go. A Dream-1 trial runs up to 3,600 steps.
+- **Seeds:** none needed. `-E object_jitter=0` keeps the fixed layout of each lot, which the scripted demo (open loop) needs and
+  the setup describes; the default seed is 0. The lot is set by `GAUGE_LAYOUT`, not by the seed.
+- **Runtime per trial:** the scripted demo took 2,205 steps in lots A and C and 2,303 in lot B (about 110 s simulated), succeeding 1 s after
+  the lot tag is let go. A Dream-1 trial runs up to 3,600 steps.
 
 ## How the demo does it
 
 Blocks go one at a time, back row first, each with the arm on its tray's side (left for ACCEPT, right for OVERSIZE
-and UNDERSIZE); the other arm waits out of the way. The demo reads the layout from the task file. For each block the arm:
+and UNDERSIZE); the other arm waits out of the way. The demo reads the lot from the task file, and last the left arm moves the tag to the lot's pad. For each block the arm:
 
 1. grips it across its width 2.5 cm in from its rear end, so the fingers never reach a bar;
 2. sets it on the table in the GO lane, 2 cm before the bar, slides it toward the bar and back out: a good or

@@ -16,5 +16,5 @@
   "run_limit": "3,600 steps (3 minutes at 20 Hz)",
   "reset_notes": "Put the six blocks back flat, long side along x, at the next layout's places (A, B, C in turn).",
   "fidelity": "Approximate. The limits are exaggerated: real gauges split hundredths of a millimetre; here the heights are 3.5 mm apart, a passing block clears its bar by 2 mm and a blocked one is 1.5 mm too tall, as tighter fits are unreliable in the simulator. The gauge and trays are fixed; three fixed lots, chosen at the start. The blocks are rigid uniform boxes; the simulator gives loose objects rubber-like friction (1.2 static, 1.0 dynamic), more than bare aluminium on steel.",
-  "scores": "Dream-1 run: pending; demo: pending"
+  "scores": "Dream-1 run: 0.0; demo: 1.0"
 }
