@@ -1,4 +1,4 @@
-# Chuck a bar in a lathe and take the key out
+# Chuck a bar in a lathe and put the key away
 
 A small lathe headstock with a 3-jaw chuck stands on the table, its jaws open. The robot must slide a round aluminium bar
 into the chuck so 50 mm sticks out of the jaws, tighten the jaws on it with the chuck key (a T-handle seated in a

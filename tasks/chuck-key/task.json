@@ -1,5 +1,5 @@
 {
-  "title": "Chuck a bar in a lathe and take the key out",
+  "title": "Chuck a bar in a lathe and put the key away",
   "category": "Impact on jobs",
   "keywords": [
     "machining",
@@ -17,5 +17,5 @@
   "reset_notes": "Open the jaws fully (turn the key back to the end stop, about two turns clockwise seen from above), lay the bar back in the V-block and stand the key in its holder with the T-bar along y.",
   "fidelity": "The key turns the jaws only through contact, its square drive in the chuck's single square socket; the jaws follow through gearing. The chuck's brake is a capped damping drive: the key needs about 0.25 N m to turn it and the clamped bar can't turn it back. Each jaw has 2 mm of spring give (50 N per mm), so turning past contact clamps; tightness is judged by the turn past contact and a 30 N pull, not the chuck's capacity. Turning the socket without the key isn't checked.",
   "scores": "Dream-1 run: 0.0; demo: 1.0",
-  "media": "M-9VCYCW"
+  "media": "M-YMRNPS"
 }
