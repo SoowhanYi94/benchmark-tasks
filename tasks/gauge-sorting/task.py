@@ -5,8 +5,9 @@ a green GO bar on the left (its underside 37.5 mm above the table) and a red NO-
 block slides under the GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides
 under both. The robot must gauge every block and put the good ones in the green ACCEPT tray on the left, the oversize
 ones in the red OVERSIZE tray and the undersize ones in the blue UNDERSIZE tray, both on the right.
+Three layouts (A, B, C) say which block lies where; the environment variable GAUGE_LAYOUT picks one (A by default).
 
-Run it:  inspect-robots run --embodiment yam_gauge -E task=tasks/gauge-sorting/task.py \\
+Run it:  GAUGE_LAYOUT=A inspect-robots run --embodiment yam_gauge -E task=tasks/gauge-sorting/task.py \\
            --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray." --scorer task_score ...
 
 `yam_gauge` (gauge_sorting/embodiment.py) is the stock yam_arena embodiment that also reports `left_tcp` and
@@ -14,12 +15,13 @@ Run it:  inspect-robots run --embodiment yam_gauge -E task=tasks/gauge-sorting/t
 """
 
 import math
+import os
 
 import numpy as np
 
 from yam_arena import ik
 from yam_arena.constants import FINGER_CLOSED, FINGER_OPEN, READY
-from yam_arena.demo import Waypoint
+from yam_arena.demo import Waypoint, grip_rotation
 from yam_arena.station import BASES
 from yam_arena.task_file import TABLE_TOP, Box
 
@@ -43,14 +45,26 @@ POSTS = (0.12, 0.0, -0.12)  # post centres (y)
 # oversize 39.0 mm (1.5 mm over GO). Lengths and widths vary so that footprint and mass don't tell the kinds apart.
 UNDER_H, GOOD_H, OVER_H = 0.0320, 0.0355, 0.0390
 FRONT_X, BACK_X = 0.10, 0.175
-PARTS = {
-    "block_1": dict(size=(0.064, 0.044, UNDER_H), start=(FRONT_X, 0.08)),
-    "block_2": dict(size=(0.060, 0.042, GOOD_H), start=(FRONT_X, 0.0)),
-    "block_3": dict(size=(0.054, 0.041, OVER_H), start=(FRONT_X, -0.08)),
-    "block_4": dict(size=(0.056, 0.041, OVER_H), start=(BACK_X, 0.08)),
-    "block_5": dict(size=(0.056, 0.040, UNDER_H), start=(BACK_X, 0.0)),
-    "block_6": dict(size=(0.055, 0.040, GOOD_H), start=(BACK_X, -0.08)),
+SIZES = {
+    "block_1": (0.064, 0.044, UNDER_H),
+    "block_2": (0.060, 0.042, GOOD_H),
+    "block_3": (0.054, 0.041, OVER_H),
+    "block_4": (0.056, 0.041, OVER_H),
+    "block_5": (0.056, 0.040, UNDER_H),
+    "block_6": (0.055, 0.040, GOOD_H),
 }
+# Six places, front row then back row, each left to right (+y first). Three layouts say which block goes where; each
+# place holds an undersize, a good and an oversize block once over the three, so where a block lies says nothing.
+# GAUGE_LAYOUT picks one for a run (A by default).
+SLOTS = [(FRONT_X, 0.08), (FRONT_X, 0.0), (FRONT_X, -0.08), (BACK_X, 0.08), (BACK_X, 0.0), (BACK_X, -0.08)]
+LAYOUTS = {
+    "A": (1, 2, 3, 4, 5, 6),  # front: under, good, over; back: over, under, good
+    "B": (2, 3, 1, 5, 6, 4),  # front: good, over, under; back: under, good, over
+    "C": (3, 5, 6, 2, 4, 1),  # front: over, under, good; back: good, over, under
+}
+LAYOUT = os.environ.get("GAUGE_LAYOUT", "A").upper()
+PARTS = {f"block_{k}": dict(size=SIZES[f"block_{k}"], start=xy) for k, xy in zip(LAYOUTS[LAYOUT], SLOTS)}
+PARTS = {n: PARTS[n] for n in SIZES}  # in block-number order
 
 
 def kind(name):
@@ -165,7 +179,7 @@ ARM = {"accept": "left", "over": "right", "under": "right"}  # each block goes w
 PLACES = [0.26, 0.34]  # x of the two blocks in each tray, on its centre line
 PARK = {a: (0.15, SIDE[a] * 0.33, TOP + 0.18) for a in SIDE}  # out of the way, above the trays' near walls
 NAMES = {"go": "GO", "nogo": "NO-GO"}
-ORDER = ["block_4", "block_5", "block_6", "block_1", "block_2", "block_3"]  # back row first
+ORDER = sorted(PARTS, key=lambda n: (-PARTS[n]["start"][0], -PARTS[n]["start"][1]))  # back row first, left to right
 
 
 def opening(w):
@@ -248,3 +262,24 @@ def demo():
         used[t] += 1
         plan.sync()
     return plan.wps
+
+
+def ik_errors(wps):
+    """The largest IK position (m) and rotation (rad) error over every waypoint of both arms."""
+    worst_p = worst_r = 0.0
+    for arm, ws in wps.items():
+        q = np.array(READY, float)
+        for w in ws:
+            q, pe, re = ik.solve(np.asarray(w.pos, float), ik.matrix_to_quat_xyzw(grip_rotation(w.yaw)), q,
+                                 base_pos=BASES[arm])
+            worst_p, worst_r = max(worst_p, pe), max(worst_r, re)
+    return worst_p, worst_r
+
+
+if __name__ == "__main__":  # self-check (no simulator): this layout's demo fits the run limit and IK reaches it
+    wps = demo()
+    t = max(sum(w.duration for w in ws) for ws in wps.values())
+    pe, re = ik_errors(wps)
+    assert t * 20 < 3600 and pe < 1e-3 and re < 1e-2, (LAYOUT, t, pe, re)
+    print(f"ok: layout {LAYOUT}: demo {t:.1f} s ({t * 20:.0f} steps), IK error <= {pe * 1000:.2f} mm / "
+          f"{math.degrees(re):.2f} deg")

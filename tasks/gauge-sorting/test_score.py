@@ -1,6 +1,7 @@
 """The score must credit each block only in the tray its two gauge limits send it to, once it is let go and still;
 cancel three correct blocks for each block in a wrong tray or off the table; and give blind or one-sided play nothing
 (or next to nothing)."""
+import importlib
 import itertools
 import math
 from types import SimpleNamespace
@@ -271,3 +272,71 @@ def test_demo_fits_run_limit_and_uses_three_trays():
     assert max(durations) * 20 < 2400 and math.isclose(durations[0], durations[1])
     labels = [w.label for w in wps["left"] + wps["right"]]
     assert sum("NO-GO bar" in lab for lab in labels) == 4 and sum("GO bar" in lab for lab in labels) == 10
+
+
+# -- the layouts -----------------------------------------------------------------------------------------------------
+def test_every_place_holds_each_kind_once_over_the_layouts():
+    """Where a block lies says nothing about its height: over A, B and C each place holds an undersize, a good and an
+    oversize block once, and each row holds one of each kind."""
+    kinds = {L: [t.kind(f"block_{k}") for k in ks] for L, ks in t.LAYOUTS.items()}
+    for i in range(len(t.SLOTS)):
+        assert sorted(kinds[L][i] for L in t.LAYOUTS) == ["accept", "over", "under"]
+    for ks in kinds.values():
+        assert sorted(ks[:3]) == sorted(ks[3:]) == ["accept", "over", "under"]
+    assert all(sorted(ks) == sorted(t.SIZES) for ks in [[f"block_{k}" for k in v] for v in t.LAYOUTS.values()])
+
+
+@pytest.fixture
+def layouts(monkeypatch):
+    def each():
+        for name in t.LAYOUTS:
+            monkeypatch.setenv("GAUGE_LAYOUT", name.lower())
+            yield name, importlib.reload(t)
+        monkeypatch.delenv("GAUGE_LAYOUT")
+        importlib.reload(t)
+    return each
+
+
+def test_scene_matches_layout(layouts):
+    for name, m in layouts():
+        for k, xy in zip(m.LAYOUTS[name], m.SLOTS):
+            o = next(o for o in m.OBJECTS if o.name == f"block_{k}")
+            assert tuple(o.pos[:2]) == xy and tuple(o.size) == m.SIZES[f"block_{k}"]
+
+
+def test_every_layout_has_no_overlaps(layouts):
+    for _, m in layouts():
+        boxes = [(np.array(p["start"]) - np.array(p["size"][:2]) / 2, np.array(p["start"]) + np.array(p["size"][:2]) / 2)
+                 for p in m.PARTS.values()]
+        for (alo, ahi), (blo, bhi) in itertools.combinations(boxes, 2):
+            assert np.any(ahi + 0.01 < blo) or np.any(bhi + 0.01 < alo)
+
+
+def test_every_layout_demo_reaches_and_gauges(layouts):
+    for name, m in layouts():
+        wps = m.demo()
+        assert max(sum(w.duration for w in ws) for ws in wps.values()) * 20 < 2400
+        pe, re = m.ik_errors(wps)
+        assert pe < 1e-3 and re < math.radians(0.5), name
+        assert [m.PARTS[n]["start"][0] for n in m.ORDER] == [m.BACK_X] * 3 + [m.FRONT_X] * 3
+
+
+def test_full_and_blind_scores_in_every_layout(layouts):
+    for _, m in layouts():
+        used, d = {k: 0 for k in m.TRAYS}, {}
+        for n in m.PARTS:
+            (cx, cy) = m.TRAYS[m.kind(n)]["center"]
+            L, W, H = m.PARTS[n]["size"]
+            c = np.array((cx + (-0.04, 0.04)[used[m.kind(n)]], cy, m.TOP + m.TRAY_FLOOR + H / 2))
+            d[n] = SimpleNamespace(pos=c, low=c - np.array((L, W, H)) / 2, high=c + np.array((L, W, H)) / 2,
+                                   resting=lambda: True)
+            used[m.kind(n)] += 1
+        tcps = {f"{a}_tcp": point(p) for a, p in m.PARK.items()}
+        assert m.score({**d, **tcps}) == 1.0
+
+
+def test_memorising_a_layout_by_place_scores_zero_in_the_others():
+    """Sorting by where a block lies, with the answer of one layout, puts all six in a wrong tray in the other two."""
+    kind_at = {L: {xy: t.kind(f"block_{k}") for k, xy in zip(ks, t.SLOTS)} for L, ks in t.LAYOUTS.items()}
+    for a, b in itertools.permutations(t.LAYOUTS, 2):
+        assert all(kind_at[a][xy] != kind_at[b][xy] for xy in t.SLOTS)
