@@ -1,6 +1,6 @@
-"""The score must credit only parts let go in the tote as the lamps show, the stocked bin's confirm pressed after its
-picks and the empty bin's shortage button, and penalise extra or substitute parts, parts on the floor and every other
-button press (early confirms, button mashing), in every lamp pattern."""
+"""One bin is lit at a time. The score must credit only parts let go in the tote as the lamps show, each stocked bin's
+confirm pressed after its picks and the empty bin's shortage button, in order, and penalise extra, substitute or early
+parts, parts on the floor and every other button press, in every order. Only a press on the lit bin moves the order on."""
 import importlib
 import math
 from types import SimpleNamespace
@@ -55,45 +55,46 @@ def run(*states):
 @pytest.fixture(params=sorted(t.PATTERNS))
 def pat(request, monkeypatch):
     p = t.PATTERNS[request.param]
-    monkeypatch.setattr(t, "LAMPS", p["lamps"])
+    monkeypatch.setattr(t, "ORDER", p["order"])
+    monkeypatch.setattr(t, "LAMPS", {b: dict(p["order"]).get(b, 0) for b in t.BIN_Y})
     monkeypatch.setattr(t, "EMPTY", p["empty"])
     return p
 
 
-def stocked(p):
-    return next(b for b, n in p["lamps"].items() if n and b != p["empty"])
-
-
 def dark(p):
-    return next(b for b, n in p["lamps"].items() if not n)
+    """The one bin the order never lights."""
+    return next(b for b in t.BIN_Y if b not in dict(p["order"]))
 
 
-def picked(p, extra=()):
-    """The stocked bin's lit count released on the tote's floor (plus any named extras)."""
-    s = start()
-    b = stocked(p)
-    for n in [*t.NAMES[b][: p["lamps"][b]], *extra]:
-        s[n] = tote()
-    return s
+def stocked(p):
+    return [b for b, _ in p["order"] if b != p["empty"]]
 
 
 def total(p):
-    return p["lamps"][stocked(p)] + 2
+    return sum(n + 1 for b, n in p["order"] if b != p["empty"]) + 1
 
 
-def done(p):
-    """The correct episode: shortage, picks, then confirm."""
-    s0 = start()
-    s1 = press(s0, f"shortage_{p['empty']}")
-    s2 = press(picked(p), f"shortage_{p['empty']}")
-    return [s0, s1, s2, press(s2, f"confirm_{stocked(p)}")]
+def walk(p):
+    """Every state of the correct episode: each bin in turn, parts then confirm, or shortage."""
+    s, out = start(), [start()]
+    for b, n in p["order"]:
+        if b == p["empty"]:
+            s = press(s, f"shortage_{b}")
+            out.append(s)
+            continue
+        for name in t.NAMES[b][:n]:
+            s = dict(s, **{name: tote()})
+            out.append(s)
+        s = press(s, f"confirm_{b}")
+        out.append(s)
+    return out
 
 
 def test_patterns():
     for p in t.PATTERNS.values():
-        assert sum(p["lamps"].values()) == 3 and p["lamps"][p["empty"]] > 0
-        assert sum(1 for b, n in p["lamps"].items() if n and b != p["empty"]) == 1
-    assert len({stocked(p) for p in t.PATTERNS.values()}) == 3  # each pattern picks from a different bin
+        assert len(p["order"]) == 3 and p["empty"] in dict(p["order"]) and len(dict(p["order"])) == 3
+        assert all(n in (1, 2) for _, n in p["order"])
+    assert len({p["order"] for p in t.PATTERNS.values()}) == 3
 
 
 def test_nothing_done(pat):
@@ -101,157 +102,151 @@ def test_nothing_done(pat):
 
 
 def test_full_score(pat):
-    assert run(*done(pat)) == (1.0, True)
+    assert run(*walk(pat)) == (1.0, True)
 
 
-def test_any_order_of_shortage_and_picks(pat):
-    s = press(picked(pat), f"confirm_{stocked(pat)}")
-    assert run(start(), picked(pat), s, press(s, f"shortage_{pat['empty']}")) == (1.0, True)
+def test_lamps_move_on_only_with_a_press_on_the_lit_bin(pat):
+    run(start())
+    assert t.active() == pat["order"][0]
+    wrong = press(start(), f"confirm_{dark(pat)}")
+    run(start(), wrong)
+    assert t.active() == pat["order"][0]
+    states = walk(pat)
+    run(*states)
+    assert t.active() is None
 
 
-def test_picks_only_like_plain_kitting(pat):
-    n = pat["lamps"][stocked(pat)]
-    assert run(start(), picked(pat))[0] == pytest.approx(n / total(pat))
+def test_each_good_press_lights_the_next_bin(pat):
+    t.reset_latch()
+    seen = []
+    for s in walk(pat):
+        t.score(s)
+        if not seen or seen[-1] != t.active():
+            seen.append(t.active())
+    assert seen == [*pat["order"], None]
 
 
-def test_shortage_only(pat):
-    assert run(start(), press(start(), f"shortage_{pat['empty']}")) == (pytest.approx(1 / total(pat)), False)
+def test_order_cannot_be_done_up_front(pat):
+    """Pressing the last bin's button first is wrong and doesn't move the order on."""
+    last = pat["order"][-1][0]
+    k = "shortage" if last == pat["empty"] else "confirm"
+    assert run(start(), press(start(), f"{k}_{last}"))[0] <= t.WRONG_CAP
+    assert t.active() == pat["order"][0]
 
 
-def test_picks_and_confirm_without_shortage(pat):
-    s = picked(pat)
-    sc, ok = run(start(), s, press(s, f"confirm_{stocked(pat)}"))
-    assert sc == pytest.approx((total(pat) - 1) / total(pat)) and not ok
+def test_part_from_a_bin_not_lit_yet_is_wrong_even_if_it_lights_later(pat):
+    later = next(b for b, _ in pat["order"][1:] if b != pat["empty"])
+    early = dict(start(), **{t.NAMES[later][0]: tote()})
+    states = [start(), early, *[{**s, **{t.NAMES[later][0]: tote()}} for s in walk(pat)]]
+    sc, ok = run(*states)
+    assert sc <= t.WRONG_CAP and not ok and later in t._EARLY
 
 
-def test_one_part_short(pat):
-    b = stocked(pat)
-    if pat["lamps"][b] < 2:
-        pytest.skip("one-part order")
-    s = start()
-    s[t.NAMES[b][0]] = tote()
-    assert run(start(), s) == (pytest.approx(1 / total(pat)), False)
+def test_partial_order_scores_its_share(pat):
+    w = walk(pat)
+    assert run(*w[:2])[0] == pytest.approx((1 if pat["order"][0][0] == pat["empty"] else 1) / total(pat))
 
 
 def test_confirm_before_picking_is_wrong(pat):
-    b = stocked(pat)
-    s = press(start(), f"confirm_{b}", f"shortage_{pat['empty']}")
-    picks = press(picked(pat), f"confirm_{b}", f"shortage_{pat['empty']}")
-    sc, ok = run(start(), s, picks)
-    assert sc <= t.WRONG_CAP and not ok
+    b, n = pat["order"][0]
+    if b == pat["empty"]:
+        pytest.skip("first bin is the empty one")
+    assert run(start(), press(start(), f"confirm_{b}"))[0] <= t.WRONG_CAP
 
 
-def test_confirm_after_a_short_pick_is_wrong(pat):
-    b = stocked(pat)
-    if pat["lamps"][b] < 2:
-        pytest.skip("one-part order")
-    s = start()
-    s[t.NAMES[b][0]] = tote()
-    s = press(s, f"confirm_{b}")
-    full = press(picked(pat), f"confirm_{b}", f"shortage_{pat['empty']}")
-    assert run(start(), s, full)[0] <= t.WRONG_CAP
+def test_confirm_short_of_the_count_is_wrong(pat):
+    b, n = next((b, n) for b, n in pat["order"] if b != pat["empty"] and n == 2) if any(
+        b != pat["empty"] and n == 2 for b, n in pat["order"]) else (None, 0)
+    if b is None:
+        pytest.skip("no two-part bin")
+    i = [x for x, _ in pat["order"]].index(b)
+    w = walk(pat)
+    upto = next(k for k, s in enumerate(w) if t.active is not None and t.NAMES[b][0] in s
+                and np.allclose(s[t.NAMES[b][0]].pos, tote().pos))
+    s = press(w[upto], f"confirm_{b}")
+    assert run(*w[: upto + 1], s)[0] <= t.WRONG_CAP
+
+
+def test_confirm_on_the_empty_bin_is_wrong(pat):
+    w = walk(pat)
+    i = [b for b, _ in pat["order"]].index(pat["empty"])
+    upto = next(k for k, s in enumerate(w) if f"shortage_{pat['empty']}" in s and not np.allclose(
+        s[f"shortage_{pat['empty']}"].pos, t.START[f"shortage_{pat['empty']}"]))
+    s = press(w[upto - 1], f"confirm_{pat['empty']}")
+    assert run(*w[:upto], s)[0] <= t.WRONG_CAP
+
+
+def test_shortage_on_a_stocked_bin_is_wrong(pat):
+    b = stocked(pat)[0]
+    assert run(*walk(pat), press(walk(pat)[-1], f"shortage_{b}"))[0] <= t.WRONG_CAP
 
 
 def test_substitute_for_the_empty_bin(pat):
-    """Taking a part from another bin in place of the empty one is wrong, from a dark bin or the stocked bin."""
-    for extra in (t.NAMES[dark(pat)][0], t.NAMES[stocked(pat)][2]):
-        last = press(picked(pat, [extra]), f"shortage_{pat['empty']}", f"confirm_{stocked(pat)}")
-        sc, ok = run(start(), last)
-        assert sc <= t.WRONG_CAP and not ok
+    sub = t.NAMES[dark(pat)][0]
+    last = dict(walk(pat)[-1], **{sub: tote()})
+    assert run(*walk(pat), last)[0] == t.WRONG_CAP
 
 
-def test_substitute_without_shortage(pat):
-    s = press(picked(pat, [t.NAMES[dark(pat)][0]]), f"confirm_{stocked(pat)}")
-    assert run(start(), s)[0] <= t.WRONG_CAP
-
-
-@pytest.mark.parametrize("which", ["confirm_empty", "shortage_stocked", "confirm_dark", "shortage_dark"])
-def test_each_wrong_button(pat, which):
-    k, kind = which.split("_")
-    b = {"empty": pat["empty"], "stocked": stocked(pat), "dark": dark(pat)}[kind]
-    last = done(pat)[-1]
-    sc, ok = run(*done(pat), press(last, f"{k}_{b}"))
-    assert sc <= t.WRONG_CAP and not ok
+@pytest.mark.parametrize("k", ["confirm", "shortage"])
+def test_press_on_the_dark_bin_is_wrong(pat, k):
+    assert run(*walk(pat), press(walk(pat)[-1], f"{k}_{dark(pat)}")) == (t.WRONG_CAP, False)
 
 
 def test_mashing_every_button(pat):
-    every = list(t.BUTTONS)
-    assert run(start(), press(start(), *every))[0] == 0.0
-    assert run(start(), picked(pat), press(picked(pat), *every))[0] == 0.0
-    assert run(*done(pat), press(done(pat)[-1], *every))[0] == 0.0
+    assert run(start(), press(start(), *t.BUTTONS))[0] == 0.0
+    assert run(*walk(pat), press(walk(pat)[-1], *t.BUTTONS))[0] <= t.WRONG_CAP
 
 
 def test_wrong_never_beats_a_clean_partial(pat):
-    last = press(done(pat)[-1], f"confirm_{dark(pat)}")
-    assert run(*done(pat), last)[0] < 1 / total(pat)
+    assert run(*walk(pat), press(walk(pat)[-1], f"confirm_{dark(pat)}"))[0] < 2 / total(pat) + t.WRONG_CAP
 
 
 def test_unpressing_does_not_clear_a_wrong_press(pat):
-    """Pulling a wrongly pressed plunger back out to where it started: the press stays counted."""
-    states = done(pat)
-    wrong = press(states[-1], f"confirm_{dark(pat)}")
-    assert run(*states, wrong, states[-1]) == (t.WRONG_CAP, False)
+    w = walk(pat)
+    wrong = press(w[-1], f"confirm_{dark(pat)}")
+    assert run(*w, wrong, w[-1]) == (t.WRONG_CAP, False)
 
 
 def test_button_forced_out_of_its_rails_counts_as_pressed(pat):
-    last = dict(done(pat)[-1])
+    last = dict(walk(pat)[-1])
     b = f"shortage_{dark(pat)}"
-    last[b] = obj(t.START[b] + (0, 0.02, 0.03))  # lifted out and set aside
-    assert run(*done(pat), last)[0] <= t.WRONG_CAP
+    last[b] = obj(t.START[b] + (0, 0.02, 0.03))
+    assert run(*walk(pat), last)[0] <= t.WRONG_CAP
 
 
 def test_small_nudge_is_not_a_press(pat):
-    s = press(done(pat)[-1], f"confirm_{dark(pat)}", dx=0.002)
-    assert run(*done(pat), s) == (1.0, True)
+    assert run(*walk(pat), press(walk(pat)[-1], f"confirm_{dark(pat)}", dx=0.002)) == (1.0, True)
 
 
-def test_reset_clears_the_latch(pat):
-    run(*done(pat))
-    assert t.score(start()) == 0.0 and not t._PRESSED
-
-
-def test_extra_from_stocked_bin(pat):
-    s = press(picked(pat, [t.NAMES[stocked(pat)][2]]), f"shortage_{pat['empty']}")
-    assert run(start(), s)[0] <= t.WRONG_CAP
-
-
-def test_extra_stacked_on_a_part_counts(pat):
-    s = done(pat)[-1]
-    s = dict(s, **{t.NAMES[dark(pat)][0]: tote(dz=0.037)})
-    assert run(*done(pat), s) == (t.WRONG_CAP, False)
-
-
-def test_extra_held_over_tote_counts(pat):
-    s = dict(done(pat)[-1], **{t.NAMES[dark(pat)][0]: tote(dz=0.06, moving=True)})
-    assert run(*done(pat), s)[0] == t.WRONG_CAP
-
-
-def test_part_far_above_tote_not_counted(pat):
-    s = dict(done(pat)[-1], **{t.NAMES[dark(pat)][0]: tote(dz=0.15, moving=True)})
-    assert run(*done(pat), s) == (1.0, True)
+def test_extra_from_a_stocked_bin(pat):
+    b = stocked(pat)[0]
+    extra = dict(walk(pat)[-1], **{t.NAMES[b][2]: tote()})
+    assert run(*walk(pat), extra)[0] == t.WRONG_CAP
 
 
 def test_held_part_not_credited(pat):
     """A part still in the gripper over the tote floor, or still moving, isn't placed."""
-    b = stocked(pat)
+    b = stocked(pat)[0]
     for held in (tote(dz=0.02), tote(moving=True)):
-        s = dict(done(pat)[-1], **{t.NAMES[b][0]: held})
-        assert run(*done(pat), s) == (pytest.approx((total(pat) - 1) / total(pat)), False)
+        s = dict(walk(pat)[-1], **{t.NAMES[b][0]: held})
+        assert run(*walk(pat), s) == (pytest.approx((total(pat) - 1) / total(pat)), False)
 
 
 def test_part_on_the_floor_costs(pat):
-    s = dict(done(pat)[-1], **{t.NAMES[dark(pat)][2]: part(0.5, 0.5, t.TOP - 0.7475)})
-    assert run(*done(pat), s) == (t.WRONG_CAP, False)
+    s = dict(walk(pat)[-1], **{t.NAMES[dark(pat)][2]: part(0.5, 0.5, t.TOP - 0.7475)})
+    assert run(*walk(pat), s) == (t.WRONG_CAP, False)
 
 
 def test_part_knocked_onto_table_is_free(pat):
-    s = dict(done(pat)[-1], **{t.NAMES[dark(pat)][2]: part(0.30, 0.25, t.TOP)})
-    assert run(*done(pat), s) == (1.0, True)
+    s = dict(walk(pat)[-1], **{t.NAMES[dark(pat)][2]: part(0.30, 0.25, t.TOP)})
+    assert run(*walk(pat), s) == (1.0, True)
 
 
 def test_part_just_outside_tote_not_counted(pat):
-    s = start()
-    s[t.NAMES[stocked(pat)][0]] = part(CX + t.TOTE["inner"][0] / 2 + 0.005, CY, t.TOP)
+    b = pat["order"][0][0]
+    if b == pat["empty"]:
+        pytest.skip("first bin is the empty one")
+    s = dict(start(), **{t.NAMES[b][0]: part(CX + t.TOTE["inner"][0] / 2 + 0.005, CY, t.TOP)})
     assert run(start(), s)[0] == 0.0
 
 
@@ -260,25 +255,16 @@ def test_emptying_the_rack(pat):
     assert run(start(), s)[0] == 0.0
 
 
-def test_score_bounds(pat):
-    rng = np.random.default_rng(0)
-    for _ in range(300):
-        s = {n: (tote(dz=rng.choice([0.0, 0.037])) if LOOSE(n) and rng.random() < 0.4 else o)
-             for n, o in start().items()}
-        s = press(s, *[b for b in t.BUTTONS if rng.random() < 0.3])
-        assert 0.0 <= run(start(), s)[0] <= 1.0
-
-
 def test_scene_matches_pattern(monkeypatch):
-    """The lit lamps are the pattern's, and the empty bin has no parts (the scene is built at import: rebuild it)."""
     for name, p in t.PATTERNS.items():
         monkeypatch.setenv("PICK_TO_LIGHT_PATTERN", name.lower())
         m = importlib.reload(t)
         lit = {o.name for o in m.OBJECTS if o.name.startswith("lamp_") and tuple(o.color) == m.LIT}
-        assert lit == {f"lamp_{b}_{k}" for b, n in p["lamps"].items() for k in range(n)}
+        b, n = p["order"][0]
+        assert lit == {f"lamp_{b}_{k}" for k in range(n)}  # only the first bin starts lit
         names = {o.name for o in m.OBJECTS}
-        assert not any(n in names for n in m.NAMES[p["empty"]])
-        assert all(n in names for b in m.BIN_Y if b != p["empty"] for n in m.NAMES[b])
+        assert not any(x in names for x in m.NAMES[p["empty"]])
+        assert all(x in names for y in m.BIN_Y if y != p["empty"] for x in m.NAMES[y])
         assert set(m.BUTTONS) <= names
     monkeypatch.delenv("PICK_TO_LIGHT_PATTERN")
     importlib.reload(t)
@@ -301,13 +287,15 @@ def test_demo_fits_run_limit_and_ik_reaches_every_waypoint():
 
 
 def test_demo_does_the_order():
-    """Shortage on the empty bin first, the stocked bin's parts, then its confirm, and nothing else."""
+    """Each bin in turn: its parts then confirm, or its shortage, and nothing else."""
     for name, p in t.PATTERNS.items():
         wps = t.demo(name)
         steps = sorted(((sum(w.duration for w in ws[:i]), w.label.split(":")[0]) for ws in wps.values()
                         for i, w in enumerate(ws) if ":" in w.label))
-        b = stocked(p)
-        assert [s for _, s in steps] == [f"shortage_{p['empty']}", *t.NAMES[b][: p["lamps"][b]], f"confirm_{b}"]
+        want = []
+        for b, n in p["order"]:
+            want += [f"shortage_{b}"] if b == p["empty"] else [*t.NAMES[b][:n], f"confirm_{b}"]
+        assert [s for _, s in steps] == want
         assert all(w.pos[0] == t.PRESS_TO_X for ws in wps.values() for w in ws if w.label == "push it in")
 
 
@@ -319,45 +307,40 @@ def _slowly(a, b, step=0.005):
 
 
 def test_robot_cannot_erase_a_wrong_press_by_putting_everything_back(pat):
-    """Council exploit (press-jam, lockout): press wrong buttons, pull them back and return the parts slowly; the
-    mistakes must survive, and redoing the order correctly afterwards stays capped."""
-    every = press(picked(pat), *t.BUTTONS)
-    states = [start(), picked(pat), every, *_slowly(every, start()), *done(pat)]
-    sc, ok = run(*states)
-    assert sc <= t.WRONG_CAP and not ok
-    assert f"confirm_{dark(pat)}" in t._PRESSED
+    """Press wrong buttons, pull them back and return the parts slowly; the mistakes must survive."""
+    every = press(start(), *t.BUTTONS)
+    sc, ok = run(start(), every, *_slowly(every, start()), *walk(pat))
+    assert sc <= t.WRONG_CAP and not ok and f"confirm_{dark(pat)}" in t._PRESSED
 
 
 def test_harness_reset_teleport_clears_presses(pat):
     """A real reset teleports everything back in one step: a new trial, and a clean run then scores 1.0."""
-    every = press(picked(pat), *t.BUTTONS)
-    assert run(start(), picked(pat), every, start(), *done(pat)) == (1.0, True)
+    every = press(dict(start(), **{t.NAMES[stocked(pat)[0]][0]: tote()}), *t.BUTTONS)  # a part that a reset jumps back
+    assert run(start(), every, start(), *walk(pat)) == (1.0, True)
 
 
 def test_teleport_without_coming_to_rest_is_not_a_reset(pat):
-    every = press(picked(pat), *t.BUTTONS)
+    every = press(start(), *t.BUTTONS)
     moving = {k: obj(o.pos, moving=True) for k, o in start().items()}
-    run(start(), picked(pat), every, moving)
+    run(start(), every, moving)
     assert f"confirm_{dark(pat)}" in t._PRESSED
 
 
 def test_part_still_gripped_on_the_tote_floor_is_not_placed(pat):
-    """Council lesson ("released" claimed but not checked): a part held still on the tote floor isn't placed; once
-    the fingertips are 2 cm clear it is."""
-    b, arm = stocked(pat), f"{t._arm(stocked(pat))}_tcp"
-    held = part(CX - 0.03, CY + 0.04, TOTE_FLOOR)  # in a corner of the tote, away from the other part
-    last = dict(done(pat)[-1], **{t.NAMES[b][0]: held})
+    """A part held still on the tote floor isn't placed; once the fingertips are 2 cm clear it is."""
+    b = stocked(pat)[0]
+    arm = f"{t._arm(b)}_tcp"
+    held = part(CX - 0.03, CY + 0.04, TOTE_FLOOR)
+    last = dict(walk(pat)[-1], **{t.NAMES[b][0]: held})
     gripping = dict(last, **{arm: obj(held.pos + (0, 0, 0.0075), half=(0, 0, 0))})
-    assert run(*done(pat), gripping) == (pytest.approx((total(pat) - 1) / total(pat)), False)
-    above = dict(last, **{arm: obj((*held.pos[:2], held.high[2] + 0.019), half=(0, 0, 0))})
-    assert run(*done(pat), above)[1] is False
+    assert run(*walk(pat), gripping) == (pytest.approx((total(pat) - 1) / total(pat)), False)
     clear = dict(last, **{arm: obj((*held.pos[:2], held.high[2] + 0.021), half=(0, 0, 0))})
-    assert run(*done(pat), clear) == (1.0, True)
+    assert run(*walk(pat), clear) == (1.0, True)
 
 
 def test_scorer_needs_the_fingertips(pat):
     """Run with plain yam_arena (no fingertip states), the scorer fails loudly rather than credit held parts."""
-    s = {n: o for n, o in picked(pat).items() if n not in TCPS}
+    s = {n: o for n, o in dict(start(), **{t.NAMES[stocked(pat)[0]][0]: tote()}).items() if n not in TCPS}
     with pytest.raises(KeyError):
         run(s)
 

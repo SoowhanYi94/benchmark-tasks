@@ -1,17 +1,17 @@
 """On the station table: a pick-to-light rack of four parts bins stands across the far side of the bench, each holding
 three identical parts (from left to right: yellow cylinders, grey blocks, orange cylinders, blue blocks). On a strip in
-front of each bin are two indicator lamps; a lit lamp (bright green) means pick one part from that bin, so a bin with
-both lamps lit needs two parts and a bin with both dark needs none. In front of the strip each bin has two push
-buttons that slide in toward the strip: a white confirm button (pressed after picking that bin's parts) and a red
-shortage button (pressed when a lit bin is empty, instead of picking). Three lamp patterns (A, B, C) each light three
-lamps over two bins, one of which is empty; the environment variable PICK_TO_LIGHT_PATTERN picks one for a run (A by
+front of each bin are two indicator lamps; a lit lamp (bright green) means pick one part from that bin. One bin is lit
+at a time: pressing its button dims it and lights the next, so the order can't be seen up front. In front of the strip
+each bin has two push buttons that slide in toward the strip: a white confirm button (pressed after picking that bin's
+parts) and a red shortage button (pressed when the lit bin is empty, instead of picking). Three orders (A, B, C) each
+light three bins in turn, one of them empty; the environment variable PICK_TO_LIGHT_PATTERN picks one for a run (A by
 default). An order tote stands in front, between the arms.
 
 `yam_ptl` (pick_to_light/embodiment.py) is the stock yam_arena embodiment that also reports `left_tcp` and
-`right_tcp`, so the scorer can tell whether a part has been let go.
+`right_tcp`, so the scorer can tell whether a part has been let go, and switches the lamps as the order moves on.
 
 Run it:  PICK_TO_LIGHT_PATTERN=A inspect-robots run --embodiment yam_ptl -E task=tasks/pick-to-light/task.py \\
-           -E object_jitter=0 --instruction "Pick the order shown by the lamps into the order tote, taking one part for every lit green lamp in front of a bin and nothing from bins whose lamps are dark, and after picking from a bin press its white confirm button; if a lit bin is empty, press its red shortage button instead and take nothing in its place." --scorer task_score ...
+           -E object_jitter=0 --instruction "Pick the order shown by the lamps into the order tote, one bin at a time: take one part for every lit green lamp from the lit bin, then press its white confirm button to light the next bin; if the lit bin is empty, press its red shortage button instead and take nothing in its place; stop when every lamp is dark." --scorer task_score ...
 """
 
 import math
@@ -40,13 +40,14 @@ PARTS = {  # kind, size, colour per bin
     "orange": dict(kind="cyl", size=(0.013, 0.035), mass=0.05, color=(0.95, 0.50, 0.10)),
     "blue": dict(kind="box", size=(0.025, 0.025, 0.035), mass=0.06, color=(0.15, 0.35, 0.80)),
 }
-PATTERNS = {  # lit lamps in front of each bin (three in all), and the lit bin that is empty (out of stock)
-    "A": dict(lamps={"yellow": 2, "grey": 0, "orange": 1, "blue": 0}, empty="orange"),
-    "B": dict(lamps={"yellow": 0, "grey": 1, "orange": 0, "blue": 2}, empty="grey"),
-    "C": dict(lamps={"yellow": 0, "grey": 2, "orange": 1, "blue": 0}, empty="grey"),
+PATTERNS = {  # the order: (bin, lamps lit) in the sequence the lamps show them, and the lit bin that is empty
+    "A": dict(order=(("yellow", 2), ("orange", 1), ("blue", 1)), empty="orange"),
+    "B": dict(order=(("blue", 2), ("grey", 1), ("yellow", 1)), empty="grey"),
+    "C": dict(order=(("orange", 1), ("grey", 2), ("blue", 2)), empty="grey"),
 }
 PATTERN = os.environ.get("PICK_TO_LIGHT_PATTERN", "A").upper()
-LAMPS, EMPTY = PATTERNS[PATTERN]["lamps"], PATTERNS[PATTERN]["empty"]
+ORDER, EMPTY = PATTERNS[PATTERN]["order"], PATTERNS[PATTERN]["empty"]
+LAMPS = {b: dict(ORDER).get(b, 0) for b in BIN_Y}  # how many parts the order wants from each bin
 LAMP_X, LAMP, STRIP_H = 0.27, 0.025, 0.01  # 2.5 cm cube lamps on a 1 cm strip, 4 cm apart (centres)
 STRIP_FACE = LAMP_X - LAMP / 2  # the strip's (and lamps') face toward the arms, x = 25.75 cm
 TOTE = dict(center=(0.11, 0.0), inner=(0.10, 0.14), wall=0.01, height=0.04, floor=0.004)
@@ -103,9 +104,11 @@ PART_START = {n: _part(n, b, RACK_X + dx, BIN_Y[b]) for b in BIN_Y for n, dx in 
 OBJECTS = [
     *[o for b, y in BIN_Y.items() for o in _box(f"bin_{b}", RACK_X, y, BIN_IN, BIN_IN, BIN_WALL, BIN_H, BIN_FLOOR, (0.30, 0.31, 0.33))],
     Box("lamp_strip", pos=(LAMP_X, 0.0, TOP + STRIP_H / 2), size=(LAMP, 0.41, STRIP_H), color=(0.20, 0.21, 0.22)),
-    # two lamps in front of each bin (left one at +y), lit or dark
+    # two lamps in front of each bin (left one at +y); the first bin of the order starts lit, and the yam_ptl
+    # embodiment switches them as the order moves on
     *[Box(f"lamp_{b}_{k}", pos=(LAMP_X, y + (0.02 if k == 0 else -0.02), TOP + STRIP_H + LAMP / 2),
-          size=(LAMP, LAMP, LAMP), color=LIT if k < LAMPS[b] else DARK) for b, y in BIN_Y.items() for k in (0, 1)],
+          size=(LAMP, LAMP, LAMP), color=LIT if b == ORDER[0][0] and k < ORDER[0][1] else DARK)
+      for b, y in BIN_Y.items() for k in (0, 1)],
     *[o for n in BUTTONS for o in _button(n)],
     *_box("order_tote", *TOTE["center"], *TOTE["inner"], TOTE["wall"], TOTE["height"], TOTE["floor"], (0.20, 0.35, 0.60)),
     *[o for n, o in PART_START.items() if not n.startswith(EMPTY + "_")],  # the empty bin has no parts
@@ -149,9 +152,12 @@ def _parts(objects, b):
     return [objects[n] for n in NAMES[b] if n in objects]
 
 
-# A button press is latched for the trial, with how many of its bin's parts were in the tote at that moment, so a
-# press can't be undone (pulling a plunger back out) and a confirm pressed before the picks is told apart from one after.
+# A button press is latched for the trial, with whether it was right when it was pressed, so a press can't be undone
+# (pulling a plunger back out). Only a press on the lit bin moves the order on. A part in the tote from a bin that hasn't
+# been lit yet is latched too: it was taken from a dark bin, even if that bin lights later.
 _PRESSED = {}
+_EARLY = set()
+_STEP = [0]
 _trial = {"start": None, "last": None}
 
 
@@ -171,26 +177,46 @@ def _new_trial(objects):
     return jumped and at_start
 
 
+def active():
+    """The order's current (bin, lamps lit), or None once it is finished: what the lamps show."""
+    return ORDER[_STEP[0]] if _STEP[0] < len(ORDER) else None
+
+
 def _latch(objects):
     if _new_trial(objects):
         _PRESSED.clear()
+        _EARLY.clear()
+        _STEP[0] = 0
+    lit = active()
+    for b in BIN_Y:  # dark now and not done: not lit yet, or never lit
+        done = {x for x, _ in ORDER[:_STEP[0]]}
+        if (lit is None or b != lit[0]) and b not in done and any(map(in_tote, _parts(objects, b))):
+            _EARLY.add(b)
     for n in BUTTONS:
         if n not in _PRESSED and n in objects and pushed(n, objects[n]):
-            _PRESSED[n] = sum(map(in_tote, _parts(objects, BUTTONS[n][1])))
+            k, b = BUTTONS[n]
+            lit = active()
+            ok = False
+            if lit is not None and b == lit[0]:
+                count = sum(map(in_tote, _parts(objects, b)))
+                ok = k == "shortage" if b == EMPTY else (k == "confirm" and count == lit[1])
+                _STEP[0] += 1
+            _PRESSED[n] = ok
 
 
 def reset_latch():
     """Forget everything, as a fresh process would (for tests)."""
     _PRESSED.clear()
+    _EARLY.clear()
+    _STEP[0] = 0
     _trial.update(start=None, last=None)
 
 
 def _tally(objects):
-    """(correct, wrong, out of). Correct: each part placed up to its bin's lit lamps; the confirm button of each lit,
-    stocked bin, pressed once the tote held exactly its lit count from that bin; the shortage button of the empty bin.
-    Wrong: each part in the tote beyond its bin's lit lamps (so any substitute, and any part from a dark bin), each part
-    on the floor, and every other button press (a confirm before the picks, on a dark or the empty bin; a shortage on
-    a stocked or dark bin)."""
+    """(correct, wrong, out of). Correct: each part placed up to its bin's lit lamps; the lit, stocked bin's confirm,
+    pressed once the tote held exactly its lit count from that bin; the lit, empty bin's shortage. Wrong: each part in the
+    tote beyond its bin's lamps (so any substitute), each bin with a part in the tote before it was lit, each part on the
+    floor, and every other button press (at the wrong count, or on any bin that isn't the lit one)."""
     _latch(objects)
     correct = wrong = total = 0
     for b in BIN_Y:
@@ -199,13 +225,10 @@ def _tally(objects):
         wrong += max(0, sum(map(in_tote, parts)) - lit) + sum(map(dropped, parts))
         stocked, empty = lit > 0 and b != EMPTY, lit > 0 and b == EMPTY
         total += (lit + 1) if stocked else (1 if empty else 0)
-        c, s = f"confirm_{b}", f"shortage_{b}"
-        if c in _PRESSED:
-            ok = stocked and _PRESSED[c] == lit
-            correct, wrong = correct + ok, wrong + (not ok)
-        if s in _PRESSED:
-            correct, wrong = correct + empty, wrong + (not empty)
-    return correct, wrong, total
+        for n in (f"confirm_{b}", f"shortage_{b}"):
+            if n in _PRESSED:
+                correct, wrong = correct + _PRESSED[n], wrong + (not _PRESSED[n])
+    return correct, wrong + len(_EARLY), total
 
 
 def success(objects):
@@ -308,20 +331,21 @@ def _press(plan, button):
 
 def demo(pattern=None):
     p = PATTERNS[PATTERN if pattern is None else pattern]
-    lamps, empty = p["lamps"], p["empty"]
+    order, empty = p["order"], p["empty"]
     plan = _Plan()
     for a in SIDE:  # from READY to a top-down park pose, so an arm waiting its turn holds a pose IK reaches
         plan.go(a, 1.0, (PARK[0], SIDE[a] * PARK[1], PARK[2]), FINGER_OPEN, "park", 0.0)
     cx, cy = TOTE["center"]
     drops = [(cx - 0.025, cy + 0.03), (cx + 0.025, cy + 0.03), (cx, cy - 0.03)]
-    _press(plan, f"shortage_{empty}")  # the empty bin: report the shortage, take nothing
     k = 0
-    for b, n in lamps.items():
-        if n and b != empty:
-            for i in range(n):  # the parts nearest the arms first
-                _pick(plan, NAMES[b][i], b, PART_SLOTS[i], drops[k])
-                k += 1
-            _press(plan, f"confirm_{b}")  # after its parts are in the tote
+    for b, n in order:  # one bin at a time, as the lamps show them
+        if b == empty:
+            _press(plan, f"shortage_{b}")  # report the shortage, take nothing
+            continue
+        for i in range(n):  # the parts nearest the arms first
+            _pick(plan, NAMES[b][i], b, PART_SLOTS[i], drops[k])
+            k += 1
+        _press(plan, f"confirm_{b}")  # after its parts are in the tote
     return plan.wps
 
 
