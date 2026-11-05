@@ -1,20 +1,24 @@
-# Sort machined blocks with a go/no-go gauge
+# Sort machined blocks with a two-limit go/no-go gauge
 
-Five machined aluminium blocks lie in a row on the bench. They look alike, but two are 4 mm too tall, and their
-lengths and widths vary so that nothing else gives them away. A fixed bridge gauge stands beyond them: a steel bar
-whose underside is 3.7 cm above the table. A good block (3.5 cm tall) slides under the bar; an oversize one (3.9 cm)
-stops against its face. The robot must check every block with the gauge and put the good ones in the green ACCEPT tray
-and the oversize ones in the red REJECT tray. A wrongly sorted block costs 1.5 correct ones, so sorting by guesswork
-or putting every block in one tray scores 0.
+Six machined aluminium blocks lie in two rows on the bench. They look alike, but they come in three heights, 3.5 mm
+apart: two are in tolerance (3.55 cm), two oversize (3.90 cm) and two undersize (3.20 cm); their lengths, widths and
+masses vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond them: a green GO bar
+whose underside is 3.75 cm above the table and, beside it, a red NO-GO bar at 3.40 cm. A good block slides under the
+GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides under both. The robot
+must gauge every block against both limits and put it in the green ACCEPT, red OVERSIZE or blue UNDERSIZE tray. A
+wrongly sorted (or dropped) block cancels three correct ones, so guessing, gauging with one bar only or putting
+everything in one tray scores 0 (the best blind strategy averages 0.056).
 
-The task file is [`gauge_sorting.py`](gauge_sorting.py) (scene, scoring and scripted demo). Setup, scoring and
-fidelity are in [`task.json`](task.json). Everything in the scene is a simulator primitive (boxes).
+The task file is [`task.py`](task.py) (scene, scoring and scripted demo). Setup, scoring and fidelity are in
+[`task.json`](task.json). Everything in the scene is a simulator primitive (boxes). The embodiment `yam_gauge`
+([`gauge_sorting/embodiment.py`](gauge_sorting/embodiment.py)) is the stock `yam_arena` one that also gives the
+scorer each gripper's fingertip centre, so a block still held doesn't count.
 
 ## Requirements
 
 [yam-isaac-lab-arena](https://github.com/kairosiann/yam-isaac-lab-arena) at commit `0059d02` (Isaac Lab-Arena 0.3.1,
 Isaac Sim 6.1), installed with its `setup.sh`, on an NVIDIA RTX GPU. Start each shell with
-`source ~/IsaacLab-Arena/yam.env`.
+`source ~/IsaacLab-Arena/yam.env`, then install this folder's embodiment once: `uv pip install -e . --no-deps`.
 
 ## Run a trial
 
@@ -22,36 +26,41 @@ From this folder:
 
 ```bash
 # Dream-1
-inspect-robots run --embodiment yam_arena --policy dream \
-  -E task=gauge_sorting.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "check each block with the bridge gauge: put the blocks that slide under the bar into the green ACCEPT tray and the ones that don't into the red REJECT tray" \
+inspect-robots run --embodiment yam_gauge --policy dream \
+  -E task=task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
+  --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray." \
   --scorer task_score --max-steps 3600 --store-frames --log-dir ~/yam-eval/gauge-sorting/dream
 
 # The scripted demo (reaches 1.0)
-inspect-robots run --embodiment yam_arena --policy yam_scripted \
-  -E task=gauge_sorting.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "check each block with the bridge gauge: put the blocks that slide under the bar into the green ACCEPT tray and the ones that don't into the red REJECT tray" \
+inspect-robots run --embodiment yam_gauge --policy yam_scripted \
+  -E task=task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
+  --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray." \
   --scorer task_score --max-steps 3600 --store-frames --log-dir ~/yam-eval/gauge-sorting/demo
 ```
 
 The run prints `task_score` at the end; the episode ends early, with `termination_reason="success"`, once every block
-has been in its tray for 1 s. Videos: `inspect-robots video <log>.json`. `python gauge_sorting.py` runs a quick
-self-check of the scorer and the demo's length without the simulator.
+has been in its tray for 1 s. Videos: `inspect-robots video <log>.json`. `GAUGE_DEBUG=1` prints the blocks, the
+fingertips and the score four times a second. `python -m pytest -q test_score.py` tests the scorer against every
+outcome in the scoring rules and the exploits we found (held, moving, stacked or dropped blocks, one-bar gauging,
+blind play), and checks the demo's length.
 
 - **Seeds:** none needed. `-E object_jitter=0` keeps the fixed layout, which the scripted demo (open loop) needs and
   the setup describes; the default seed is 0.
-- **Runtime per trial:** the scripted demo succeeds after 1,355 steps (68 s simulated), about 2.7 minutes on an
-  RTX 4070 once Isaac Sim has started (the first run on a machine adds a few minutes for shader compilation).
-  A Dream-1 trial runs up to 3,600 steps.
+- **Runtime per trial:** the scripted demo's plan is 2,056 steps (103 s simulated), and it succeeds 1 s after the
+  last block is let go. A Dream-1 trial runs up to 3,600 steps.
 
 ## How the demo does it
 
-Each block goes with the arm on its tray's side, one arm at the gauge at a time. For each block the arm:
+Blocks go one at a time, back row first, each with the arm on its tray's side (left for ACCEPT, right for OVERSIZE
+and UNDERSIZE); the other arm waits out of the way. For each block the arm:
 
-1. grips it across its width 2.5 cm in from its rear end, so the fingers never reach the bar;
-2. sets it on the table in front of the gauge and slides it toward the bar: in the logged run the good blocks' fronts
-   went 0.8-1.8 cm under the bar and the oversize blocks' fronts stopped at its face (within 1 mm);
-3. slides it back out, lifts it and lays it in its tray.
+1. grips it across its width 2.5 cm in from its rear end, so the fingers never reach a bar;
+2. sets it on the table in the GO lane, 2 cm before the bar, slides it toward the bar and back out: a good or
+   undersize block's front goes 1.5 cm under the bar, an oversize one stops at its face;
+3. if it went under, eases it 1 cm up, moves it across to the NO-GO lane, and slides it toward that bar and back out:
+   an undersize block goes under, a good one stops at its face;
+4. lifts it and lays it in its tray, opening only 2 cm wider than the block.
 
-The demo is open loop: it knows which blocks are good, and the gauge test shows the result rather than deciding it.
-The slide aims 1.5 cm past its target because the arms reach about that much short at the gauge (measured).
+The demo is open loop: it knows each block's kind, and the gauge shows the result rather than deciding it. Each slide
+aims 1.5 cm past its target because the arms reach about that much short at the gauge (measured in an earlier
+one-bar version of this task). Every step of the plan passes IK within 0.1 mm and 0.02 degrees.
