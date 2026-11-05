@@ -1,0 +1,21 @@
+{
+  "title": "Set a rocker's valve lash with a feeler gauge and lock it",
+  "category": "Impact on jobs",
+  "keywords": [
+    "bimanual",
+    "tool use",
+    "feeler gauge",
+    "valve lash",
+    "screw mechanism",
+    "maintenance"
+  ],
+  "instruction": "Set the valve lash with the feeler gauge: slide its blade under the adjusting screw, turn the screw down onto it, tighten the locknut onto the rocker, then pull the blade out and move both hands away.",
+  "context": "Setting valve lash on screw-and-locknut rockers is routine engine and compressor maintenance. The feeler blade, not the eye, sets the gap: one hand holds the blade in the gap while the other turns the screw down onto it (and backs it off if it pinches), then runs the locknut down without losing the setting.",
+  "setup": "On the station's bench table, both arms at READY. Axes: x away from the arms, y to the left, z up; positions in cm from the point midway between the arm bases on the table top. Valve fixture (all fixed except the screw and nut): cylinder-head block, cast iron, dark grey, x 17.5 to 30, y -4 to 4, 3.5 tall. Valve stem, steel, 8 mm, upright at (26, 0), top 6 above the table, in a valve spring (blue steel, 2.2 cm diameter, up to 5.1) with a steel retainer (to 5.4). Rocker pedestal, cast iron, x 18.5 to 21, y -1.2 to 1.2, up to 7.2. Rocker arm, steel, fixed, x 18 to 27.2, y -0.9 to 0.9, z 7.2 to 8.4, with a pivot pin at x 19.75. Adjusting screw, brass, 8 mm, vertical at (26, 0) through the rocker, 2 mm per turn (clockwise from above goes down); its tip at z 6.8, 8 mm above the stem. On its top (z 11.8) a black steel T-bar 7 long along x, 6 mm square, with a 10 mm pin 2.5 tall (top z 13.7) at each end (x 22.5 and 29.5). Locknut, steel, 15 mm wide, 7 mm tall, its underside 7 mm above the rocker (z 9.1), with four steel spokes (5 mm square) to pins 8.5 from the axis at -45, 45, 135 and 225 degrees from +x (10 mm pins, tops at z 12.05). Feeler gauge: aluminium handle 1.8 (x) by 6 (y) by 3.5 tall, 102 g, with a 13.5 cm steel blade, 2.0 mm thick and 12 mm wide (25 g), running from its -y end, flush with its underside; it lies flat, handle centred at (22, 27), the blade pointing to -y (its tip at y 10.5).",
+  "scoring": "Scored at the end of the run; the gap is the screw tip's height above the valve stem's top. Nothing scores unless, at some point in the trial, the blade lay across the stem with the screw's tip turned down onto it (each within -0.5 to +0.3 mm of touching). Then: 0.4 if the gap is 1.7 to 2.3 mm (2.0 mm, the blade, plus or minus 0.3 mm; a 1.7 mm feeler blade enters and a 2.3 mm one doesn't). +0.3 if, as well, the locknut is seated: its underside within -0.5 to +0.2 mm of the rocker's top. +0.3 if, as well, no part of the blade is within 1.5 cm of the screw's axis between the stem and the rocker, and each fingertip centre is at least 12 cm (horizontally) from the screw's axis. A gap outside 1.7 to 2.3 mm scores 0, and so does a screw or nut pushed more than 1 mm off its axis or tilted more than 2 degrees. The run ends early, scoring 1.0, once all three hold for 1 s.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Loosen the locknut (turn it up off the rocker), turn the screw back up to an 8 mm gap, run the locknut back up to 7 mm above the rocker with a spoke at -45 degrees and the T-bar along x, and lay the gauge back at its start.",
+  "fidelity": "The T-bar and spoked pins stand in for a screwdriver and a spanner. Screw and locknut are joints coupled at 2 mm per turn (about 1.6x an M8 thread); lash and blade are 2 mm, about 10x real, for contact resolution. Contact is rigid but gives about 0.2 mm under load. The nut's preload isn't modelled: once it seats the screw is locked, so it needn't be held while locking; turning the nut drags the screw slightly. The rocker is fixed.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-TB2USV"
+}
