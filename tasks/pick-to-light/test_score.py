@@ -313,19 +313,6 @@ def test_robot_cannot_erase_a_wrong_press_by_putting_everything_back(pat):
     assert sc <= t.WRONG_CAP and not ok and f"confirm_{dark(pat)}" in t._PRESSED
 
 
-def test_harness_reset_teleport_clears_presses(pat):
-    """A real reset teleports everything back in one step: a new trial, and a clean run then scores 1.0."""
-    every = press(dict(start(), **{t.NAMES[stocked(pat)[0]][0]: tote()}), *t.BUTTONS)  # a part that a reset jumps back
-    assert run(start(), every, start(), *walk(pat)) == (1.0, True)
-
-
-def test_teleport_without_coming_to_rest_is_not_a_reset(pat):
-    every = press(start(), *t.BUTTONS)
-    moving = {k: obj(o.pos, moving=True) for k, o in start().items()}
-    run(start(), every, moving)
-    assert f"confirm_{dark(pat)}" in t._PRESSED
-
-
 def test_part_still_gripped_on_the_tote_floor_is_not_placed(pat):
     """A part held still on the tote floor isn't placed; once the fingertips are 2 cm clear it is."""
     b = stocked(pat)[0]
@@ -353,3 +340,22 @@ def test_demo_lets_go_well_clear_of_each_part():
             for i, w in enumerate(ws):
                 if w.label == "release":
                     assert w.pos[2] - part_top > 0.03 and ws[i + 1].pos[2] == t.Z_UP
+
+
+def _first_bin_picked(pat):
+    b, lit = t.ORDER[0]
+    return b, dict(start(), **{t.NAMES[b][i]: tote() for i in range(lit)})
+
+
+def test_only_pushing_in_is_a_right_press(pat):
+    b, s = _first_bin_picked(pat)
+    n = f"confirm_{b}"
+    run(start(), press(s, n))
+    assert t._PRESSED[n] is True
+    run(start(), press(s, n, dx=-0.006))  # pulled out toward the arms
+    assert t._PRESSED[n] is False
+
+
+def test_dumping_the_first_lit_bin_scores_nothing(pat):
+    b = t.ORDER[0][0]
+    assert run(start(), dict(start(), **{n: tote() for n in t.NAMES[b]}))[0] == 0

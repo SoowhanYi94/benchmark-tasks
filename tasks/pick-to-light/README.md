@@ -1,12 +1,12 @@
-# Pick, confirm and report shortages on a pick-to-light rack
+# Confirm each pick and report the stock-out as the lamps call the bins in turn
 
 A pick-to-light rack of four parts bins has two indicator lamps on a strip in front of every bin; each lit (green) lamp
 means one part to pick from that bin. In front of the strip each bin has a white confirm button and a red shortage
 button, plungers pushed in toward the strip. One bin is lit at a time: pressing the lit bin's button dims it and lights the
-next, so the robot can't see the order up front and must read the rack again after every press. Each trial is one of three
-orders of three bins, one of them empty (A: yellow 2, orange 1, blue 1, orange empty; B: blue 2, grey 1, yellow 1, grey
-empty; C: orange 1, grey 2, blue 2, grey empty). Every extra or substitute part, part taken before its bin lit, part on
-the floor and wrong press costs 1.5 correct ones and caps the trial at 0.2, so pressing every button scores 0. The task's
+next, so the bins to come aren't shown up front. Each trial is one of three
+orders of three bins, one of them empty (A: yellow 2, orange 1 (empty), blue 1; B: blue 2, grey 1 (empty), yellow 1;
+C: orange 1, grey 2 (empty), blue 2). Every extra or substitute part, part taken before its bin lit, part on
+the floor and wrong press costs 2 correct ones and caps the trial at 0.2, so pressing every button scores 0. The task's
 score is the mean over one trial of each order.
 
 The task file is [`task.py`](task.py) (scene, scoring and scripted demo). Setup, scoring and fidelity are in
@@ -23,8 +23,9 @@ the lamps as the order moves on.
 - **Confirm button (white):** pressed once a bin's parts are in the tote, to tell the order system the pick is done.
 - **Shortage button (red):** pressed instead of picking when a lit bin is empty (a stock-out).
 - **Substitute:** a part from any other bin put in the tote in place of the missing one; it is wrong.
-- **Placed:** in the tote, at rest on its floor, and let go (both fingertip centres 2 cm or more away).
-- **Pressed:** a plunger moved 4 mm or more from its start; it stays counted for the trial.
+- **Placed:** in the tote, at rest on its floor, and let go (each gripper's fingertip midpoint 2 cm or more away).
+- **Pressed:** a plunger moved 4 mm or more from its start; only pushing it in can count as right, and it stays counted for
+  the trial.
 
 ## Requirements
 
@@ -51,9 +52,8 @@ PICK_TO_LIGHT_PATTERN=A inspect-robots run --embodiment yam_ptl --policy yam_scr
 ```
 
 The run prints `task_score` at the end; the episode ends early, with `termination_reason="success"`, once the order,
-its confirm and the shortage have all held for 1 s. Button presses are latched in the task file for the episode (with
-the tote's count at the moment of each press), and it clears only on a harness reset: a step on which a loose object jumped more
-than 1 cm and everything is then at rest within 1 mm of its start (a robot putting things back can't do that). Videos: `inspect-robots video <log>.json`.
+its confirms and the shortage have all held for 1 s. Button presses are latched in the task file for the episode (with
+the tote's count at the moment of each press), and it clears only when the embodiment resets, so scoring must run inside the step loop. Videos: `inspect-robots video <log>.json`.
 
 `python -m pytest -q test_score.py` tests the scorer against every outcome in the scoring rules in all three orders:
 the full order, picks without buttons, a part still gripped on the tote floor, each button alone, a confirm before or after a short pick, substitutes for the

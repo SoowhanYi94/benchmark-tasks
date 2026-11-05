@@ -51,7 +51,7 @@ LAMPS = {b: dict(ORDER).get(b, 0) for b in BIN_Y}  # how many parts the order wa
 LAMP_X, LAMP, STRIP_H = 0.27, 0.025, 0.01  # 2.5 cm cube lamps on a 1 cm strip, 4 cm apart (centres)
 STRIP_FACE = LAMP_X - LAMP / 2  # the strip's (and lamps') face toward the arms, x = 25.75 cm
 TOTE = dict(center=(0.11, 0.0), inner=(0.10, 0.14), wall=0.01, height=0.04, floor=0.004)
-WRONG_PENALTY, WRONG_CAP = 1.5, 0.2
+WRONG_PENALTY, WRONG_CAP = 2.0, 0.2
 HANDS_CLEAR = 0.02  # a part is placed only when both fingertip centres are this far from it
 NAMES = {b: [f"{b}_part_{i}" for i in range(len(PART_SLOTS))] for b in BIN_Y}
 
@@ -144,8 +144,13 @@ def dropped(o):
 
 
 def pushed(name, o):
-    """Moved 4 mm or more from its start in any direction: pushed in, or forced out of its rails."""
+    """Moved 4 mm or more from its start in any direction. Only ``in_toward_strip`` makes it a correct press."""
     return bool(np.linalg.norm(np.asarray(o.pos) - START[name]) >= PRESS_TRAVEL)
+
+
+def in_toward_strip(name, o):
+    """Pushed in along +x, the button's travel: pulling it out or forcing it from its rails is a wrong press."""
+    return bool(o.pos[0] - START[name][0] >= PRESS_TRAVEL)
 
 
 def _parts(objects, b):
@@ -158,23 +163,6 @@ def _parts(objects, b):
 _PRESSED = {}
 _EARLY = set()
 _STEP = [0]
-_trial = {"start": None, "last": None}
-
-
-def _new_trial(objects):
-    """The harness doesn't tell a task file when a trial starts. The first scored step starts one (its settled poses
-    are the start), and so does a step on which a loose part or button jumped more than 1 cm since the last step and
-    every loose object is now at rest within 1 mm of its start: a reset teleports them; a robot putting parts and
-    buttons back moves them under 1 cm a step and can't stop them all dead on their marks as one did that jump."""
-    now = {n: np.asarray(o.pos, float) for n, o in objects.items() if n in START}
-    start, last = _trial["start"], _trial["last"]
-    _trial["last"] = now
-    if start is None:
-        _trial["start"] = now
-        return True
-    jumped = any(np.linalg.norm(p - last[n]) > 0.01 for n, p in now.items() if n in last)
-    at_start = all(n in start and np.linalg.norm(p - start[n]) < 0.001 and objects[n].resting() for n, p in now.items())
-    return jumped and at_start
 
 
 def active():
@@ -183,10 +171,6 @@ def active():
 
 
 def _latch(objects):
-    if _new_trial(objects):
-        _PRESSED.clear()
-        _EARLY.clear()
-        _STEP[0] = 0
     lit = active()
     for b in BIN_Y:  # dark now and not done: not lit yet, or never lit
         done = {x for x, _ in ORDER[:_STEP[0]]}
@@ -199,17 +183,16 @@ def _latch(objects):
             ok = False
             if lit is not None and b == lit[0]:
                 count = sum(map(in_tote, _parts(objects, b)))
-                ok = k == "shortage" if b == EMPTY else (k == "confirm" and count == lit[1])
+                ok = in_toward_strip(n, objects[n]) and (k == "shortage" if b == EMPTY else (k == "confirm" and count == lit[1]))
                 _STEP[0] += 1
             _PRESSED[n] = ok
 
 
 def reset_latch():
-    """Forget everything, as a fresh process would (for tests)."""
+    """Forget everything: the embodiment calls this at every reset."""
     _PRESSED.clear()
     _EARLY.clear()
     _STEP[0] = 0
-    _trial.update(start=None, last=None)
 
 
 def _tally(objects):
@@ -237,7 +220,7 @@ def success(objects):
 
 
 def score(objects):
-    """(correct - 1.5 x wrong) / out of, at least 0, and at most 0.2 with anything wrong."""
+    """(correct - 2 x wrong) / out of, at least 0, and at most 0.2 with anything wrong."""
     correct, wrong, total = _tally(objects)
     s = max(0.0, correct - WRONG_PENALTY * wrong) / total
     return float(min(s, WRONG_CAP) if wrong else s)
