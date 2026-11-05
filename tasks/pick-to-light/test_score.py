@@ -1,4 +1,4 @@
-"""The score must credit only parts released in the tote as the lamps show, the stocked bin's confirm pressed after its
+"""The score must credit only parts let go in the tote as the lamps show, the stocked bin's confirm pressed after its
 picks and the empty bin's shortage button, and penalise extra or substitute parts, parts on the floor and every other
 button press (early confirms, button mashing), in every lamp pattern."""
 import importlib
@@ -15,7 +15,11 @@ CX, CY = t.TOTE["center"]
 
 def obj(pos, moving=False, half=(0.013, 0.013, 0.0175)):
     pos = np.array(pos, float)
-    return SimpleNamespace(pos=pos, low=pos - np.array(half), resting=lambda: not moving)
+    return SimpleNamespace(pos=pos, low=pos - np.array(half), high=pos + np.array(half), resting=lambda: not moving)
+
+
+TCPS = {f"{a}_tcp": obj((t.PARK[0], t.SIDE[a] * t.PARK[1], t.PARK[2]), half=(0, 0, 0)) for a in t.SIDE}
+LOOSE = lambda n: n not in t.BUTTONS and n not in TCPS  # noqa: E731  (a part)
 
 
 def part(x, y, z, moving=False):
@@ -30,7 +34,7 @@ def tote(dz=0.0, **kw):
 def start():
     """The scene as a reset leaves it: parts in their bins (none in the empty bin), every button out."""
     s = {n: obj(p) for n, p in t.START.items() if n in t.BUTTONS or not n.startswith(t.EMPTY + "_")}
-    return s
+    return {**s, **TCPS}  # both arms parked
 
 
 def press(s, *buttons, dx=0.006):
@@ -252,14 +256,14 @@ def test_part_just_outside_tote_not_counted(pat):
 
 
 def test_emptying_the_rack(pat):
-    s = {n: (tote() if n not in t.BUTTONS else o) for n, o in start().items()}
+    s = {n: (tote() if LOOSE(n) else o) for n, o in start().items()}
     assert run(start(), s)[0] == 0.0
 
 
 def test_score_bounds(pat):
     rng = np.random.default_rng(0)
     for _ in range(300):
-        s = {n: (tote(dz=rng.choice([0.0, 0.037])) if n not in t.BUTTONS and rng.random() < 0.4 else o)
+        s = {n: (tote(dz=rng.choice([0.0, 0.037])) if LOOSE(n) and rng.random() < 0.4 else o)
              for n, o in start().items()}
         s = press(s, *[b for b in t.BUTTONS if rng.random() < 0.3])
         assert 0.0 <= run(start(), s)[0] <= 1.0
@@ -335,3 +339,34 @@ def test_teleport_without_coming_to_rest_is_not_a_reset(pat):
     moving = {k: obj(o.pos, moving=True) for k, o in start().items()}
     run(start(), picked(pat), every, moving)
     assert f"confirm_{dark(pat)}" in t._PRESSED
+
+
+def test_part_still_gripped_on_the_tote_floor_is_not_placed(pat):
+    """Council lesson ("released" claimed but not checked): a part held still on the tote floor isn't placed; once
+    the fingertips are 2 cm clear it is."""
+    b, arm = stocked(pat), f"{t._arm(stocked(pat))}_tcp"
+    held = part(CX - 0.03, CY + 0.04, TOTE_FLOOR)  # in a corner of the tote, away from the other part
+    last = dict(done(pat)[-1], **{t.NAMES[b][0]: held})
+    gripping = dict(last, **{arm: obj(held.pos + (0, 0, 0.0075), half=(0, 0, 0))})
+    assert run(*done(pat), gripping) == (pytest.approx((total(pat) - 1) / total(pat)), False)
+    above = dict(last, **{arm: obj((*held.pos[:2], held.high[2] + 0.019), half=(0, 0, 0))})
+    assert run(*done(pat), above)[1] is False
+    clear = dict(last, **{arm: obj((*held.pos[:2], held.high[2] + 0.021), half=(0, 0, 0))})
+    assert run(*done(pat), clear) == (1.0, True)
+
+
+def test_scorer_needs_the_fingertips(pat):
+    """Run with plain yam_arena (no fingertip states), the scorer fails loudly rather than credit held parts."""
+    s = {n: o for n, o in picked(pat).items() if n not in TCPS}
+    with pytest.raises(KeyError):
+        run(s)
+
+
+def test_demo_lets_go_well_clear_of_each_part():
+    """After each release the TCP rises to 10 cm: over 2 cm above a 3.5 cm part standing on the tote floor."""
+    part_top = t.TOP + t.TOTE["floor"] + 0.035
+    for name in t.PATTERNS:
+        for ws in t.demo(name).values():
+            for i, w in enumerate(ws):
+                if w.label == "release":
+                    assert w.pos[2] - part_top > 0.03 and ws[i + 1].pos[2] == t.Z_UP

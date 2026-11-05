@@ -5,3 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "robocurve-pick-to-light"
 version = "0.0.1"
+
+[project.entry-points."inspect_robots.embodiments"]
+yam_ptl = "pick_to_light.embodiment:make_embodiment"
+
+[tool.setuptools.packages.find]
+include = ["pick_to_light*"]

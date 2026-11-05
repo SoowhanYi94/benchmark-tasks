@@ -7,7 +7,10 @@ shortage button (pressed when a lit bin is empty, instead of picking). Three lam
 lamps over two bins, one of which is empty; the environment variable PICK_TO_LIGHT_PATTERN picks one for a run (A by
 default). An order tote stands in front, between the arms.
 
-Run it:  PICK_TO_LIGHT_PATTERN=A inspect-robots run --embodiment yam_arena -E task=tasks/pick-to-light/task.py \\
+`yam_ptl` (pick_to_light/embodiment.py) is the stock yam_arena embodiment that also reports `left_tcp` and
+`right_tcp`, so the scorer can tell whether a part has been let go.
+
+Run it:  PICK_TO_LIGHT_PATTERN=A inspect-robots run --embodiment yam_ptl -E task=tasks/pick-to-light/task.py \\
            -E object_jitter=0 --instruction "Pick the order shown by the lamps into the order tote, taking one part for every lit green lamp in front of a bin and nothing from bins whose lamps are dark, and after picking from a bin press its white confirm button; if a lit bin is empty, press its red shortage button instead and take nothing in its place." --scorer task_score ...
 """
 
@@ -48,6 +51,7 @@ LAMP_X, LAMP, STRIP_H = 0.27, 0.025, 0.01  # 2.5 cm cube lamps on a 1 cm strip, 
 STRIP_FACE = LAMP_X - LAMP / 2  # the strip's (and lamps') face toward the arms, x = 25.75 cm
 TOTE = dict(center=(0.11, 0.0), inner=(0.10, 0.14), wall=0.01, height=0.04, floor=0.004)
 WRONG_PENALTY, WRONG_CAP = 1.5, 0.2
+HANDS_CLEAR = 0.02  # a part is placed only when both fingertip centres are this far from it
 NAMES = {b: [f"{b}_part_{i}" for i in range(len(PART_SLOTS))] for b in BIN_Y}
 
 # Push buttons: a free plastic plunger per button, lying on the table in a fixed guide (two rails), pushed along +x
@@ -116,9 +120,19 @@ def in_tote(o):
     return bool(abs(o.pos[0] - cx) <= ix / 2 and abs(o.pos[1] - cy) <= iy / 2 and o.pos[2] <= TOP + TOTE["height"] + 0.05)
 
 
-def placed(o):
-    """In the tote, released and at rest, its underside within 1 cm of the tote's floor."""
-    return bool(in_tote(o) and o.low[2] <= TOP + TOTE["floor"] + 0.01 and o.resting())
+def hands_clear(o, objects):
+    """Both fingertip centres (from the yam_ptl embodiment) at least 2 cm from the part's bounding box: let go."""
+    for arm in ("left_tcp", "right_tcp"):
+        p = np.asarray(objects[arm].pos, float)
+        if np.linalg.norm(p - np.clip(p, o.low, o.high)) < HANDS_CLEAR:
+            return False
+    return True
+
+
+def placed(o, objects):
+    """In the tote, let go (both fingertip centres 2 cm or more from it) and at rest, its underside within 1 cm of
+    the tote's floor."""
+    return bool(in_tote(o) and o.low[2] <= TOP + TOTE["floor"] + 0.01 and o.resting() and hands_clear(o, objects))
 
 
 def dropped(o):
@@ -181,7 +195,7 @@ def _tally(objects):
     correct = wrong = total = 0
     for b in BIN_Y:
         parts, lit = _parts(objects, b), LAMPS[b]
-        correct += min(sum(map(placed, parts)), lit)
+        correct += min(sum(placed(o, objects) for o in parts), lit)
         wrong += max(0, sum(map(in_tote, parts)) - lit) + sum(map(dropped, parts))
         stocked, empty = lit > 0 and b != EMPTY, lit > 0 and b == EMPTY
         total += (lit + 1) if stocked else (1 if empty else 0)
