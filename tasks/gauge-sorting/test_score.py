@@ -34,8 +34,19 @@ def at(name, tray, k=0, **kw):
 def state(**blocks):
     s = {n: block(n, *p["start"], t.TOP) for n, p in t.PARTS.items()}
     s.update({k: point(v) for k, v in PARK.items()})
+    s["lot_tag"] = tag(*t.TAG["start"])
     s.update(blocks)
     return s
+
+
+def tag(x, y, moving=False, dz=0.0):
+    h = t.TAG["size"] / 2
+    c = np.array((x, y, t.TOP + t.PAD_H + h + dz))
+    return SimpleNamespace(pos=c, low=c - h, high=c + h, resting=lambda: not moving)
+
+
+def on_pad(pad=None, **kw):
+    return tag(*t.LOT_PADS[pad or t.lot_decision()]["center"], **kw)
 
 
 def done():
@@ -45,6 +56,11 @@ def done():
         out[n] = at(n, t.kind(n), used[t.kind(n)])
         used[t.kind(n)] += 1
     return out
+
+
+def sort_score(s):
+    """The score on the sort's own 0 to 1 scale (its share of the task's score), with the tag left at its start."""
+    return t.score(s) / t.SORT_SHARE
 
 
 def approx(a, b):
@@ -102,19 +118,63 @@ def test_start_layout_has_no_overlaps():
 
 # -- outcomes ------------------------------------------------------------------------------------------------------
 def test_nothing_done():
-    assert t.score(state()) == 0.0 and not t.success(state())
+    assert sort_score(state()) == 0.0 and not t.success(state())
 
 
 def test_full_score():
+    s = state(**done(), lot_tag=on_pad())
+    assert t.score(s) == pytest.approx(1.0) and t.success(s)
+
+
+def test_sort_alone_is_short_of_full_marks():
     s = state(**done())
-    assert t.score(s) == 1.0 and t.success(s)
+    assert t.score(s) == pytest.approx(0.7) and not t.success(s)
+
+
+def test_tag_on_the_right_pad_without_the_sort_earns_nothing():
+    assert t.score(state(lot_tag=on_pad())) == 0.0
+
+
+def test_tag_on_the_wrong_pad_is_capped():
+    wrong = "hold" if t.lot_decision() == "release" else "release"
+    s = state(**done(), lot_tag=on_pad(wrong))
+    assert t.score(s) == pytest.approx(t.WRONG_LOT_CAP) and not t.success(s)
+
+
+def test_tag_still_held_or_moving_does_not_count():
+    arm = {"left_tcp": point(on_pad().pos)}
+    assert t.tag_on(state(lot_tag=on_pad(), **arm)) is None
+    assert t.tag_on(state(lot_tag=on_pad(moving=True))) is None
+
+
+def test_tag_off_its_pad_or_stacked_up_does_not_count():
+    (cx, cy) = t.LOT_PADS[t.lot_decision()]["center"]
+    assert t.tag_on(state(lot_tag=tag(cx + t.PAD_SIZE, cy))) is None
+    assert t.tag_on(state(lot_tag=on_pad(dz=0.02))) is None
+
+
+def test_lots_call_for_different_decisions_by_counting(layouts):
+    seen = {}
+    for name, m in layouts():
+        rejects = sum(m.kind(n) != "accept" for n in m.PARTS)
+        assert sum(m.kind(n) == "accept" for n in m.PARTS) <= 4
+        assert all(sum(m.kind(n) == k for n in m.PARTS) <= 2 for k in ("over", "under"))
+        seen[name] = (rejects, m.lot_decision())
+    assert seen == {"A": (4, "hold"), "B": (2, "release"), "C": (3, "hold")}
+
+
+def test_demo_places_every_block_and_the_tag_by_the_lot(layouts):
+    for _, m in layouts():
+        ws = m.demo()["left"]
+        assert any(w.label == "over the lot's pad" and w.pos[:2] == m.LOT_PADS[m.lot_decision()]["center"] for w in ws)
+        assert max(sum(w.duration for w in v) for v in m.demo().values()) * 20 < 3600
 
 
 @pytest.mark.parametrize("k", range(7))
 def test_partial_correct(k):
     d = done()
     s = state(**{n: d[n] for n in list(t.PARTS)[:k]})
-    assert approx(t.score(s), k / 6) and t.success(s) == (k == 6)
+    assert approx(sort_score(s), k / 6) and not t.success(s)
 
 
 def test_one_wrong_cancels_three():
@@ -122,47 +182,47 @@ def test_one_wrong_cancels_three():
     wrong = "block_1"  # undersize, into ACCEPT
     s = state(**dict(d, block_1=at(wrong, "accept", 1)))
     s["block_2"] = at("block_2", "accept", 0)
-    assert approx(t.score(s), (5 - 3) / 6) and not t.success(s)
+    assert approx(sort_score(s), (5 - 3) / 6) and not t.success(s)
 
 
 def test_two_wrong_score_zero():
     d = done()
     s = state(**dict(d, block_1=at("block_1", "over", 1), block_3=at("block_3", "under", 1)))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_wrong_run_never_beats_correct_partial():
     """Two right and one wrong (0) is below one right alone (1/6)."""
     d = done()
-    assert t.score(state(block_2=d["block_2"], block_6=d["block_6"], block_1=at("block_1", "accept"))) == 0.0
-    assert approx(t.score(state(block_2=d["block_2"])), 1 / 6)
+    assert sort_score(state(block_2=d["block_2"], block_6=d["block_6"], block_1=at("block_1", "accept"))) == 0.0
+    assert approx(sort_score(state(block_2=d["block_2"])), 1 / 6)
 
 
 @pytest.mark.parametrize("tray", list(t.TRAYS))
 def test_everything_in_one_tray_scores_zero(tray):
     s = state(**{n: at(n, tray, i % 2) for i, n in enumerate(t.PARTS)})
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_go_side_only_scores_zero():
     """Gauging with the GO bar alone (as a single-limit check would): undersize blocks land in ACCEPT."""
     d = done()
     s = state(**dict(d, block_1=at("block_1", "accept", 0), block_5=at("block_5", "accept", 1)))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_nogo_side_only_scores_zero():
     """Gauging with the NO-GO bar alone: oversize blocks land in ACCEPT."""
     d = done()
     s = state(**dict(d, block_3=at("block_3", "accept", 0), block_4=at("block_4", "accept", 1)))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_over_and_under_swapped_scores_zero():
     d = done()
     s = state(**dict(d, **{n: at(n, "under" if t.kind(n) == "over" else "over", i % 2)
                            for i, n in enumerate(t.PARTS) if t.kind(n) != "accept"}))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_blind_play_near_zero():
@@ -190,7 +250,7 @@ def test_held_block_does_not_count():
     b = d["block_2"]
     s = state(**d)
     s["left_tcp"] = point((b.pos[0] - 0.005, b.pos[1], b.low[2] + t.GRIP_Z))
-    assert approx(t.score(s), 5 / 6) and not t.success(s)
+    assert approx(sort_score(s), 5 / 6) and not t.success(s)
 
 
 def test_fingers_just_above_do_not_count_until_2cm_clear():
@@ -211,58 +271,58 @@ def test_held_wrong_block_still_counts_as_wrong_once_let_go_only():
     wrong = block("block_1", cx, cy + 0.06, t.TOP + t.TRAY_FLOOR)
     s = state(**dict(d, block_1=wrong))
     s["right_tcp"] = point(wrong.pos)
-    assert approx(t.score(s), 5 / 6)
+    assert approx(sort_score(s), 5 / 6)
     s["right_tcp"] = point(PARK["right_tcp"])
-    assert approx(t.score(s), (5 - 3) / 6)
+    assert approx(sort_score(s), (5 - 3) / 6)
 
 
 def test_moving_block_does_not_count():
     d = done()
     s = state(**dict(d, block_4=at("block_4", "over", 0, moving=True)))
-    assert approx(t.score(s), 5 / 6)
+    assert approx(sort_score(s), 5 / 6)
 
 
 def test_block_dropped_off_table_counts_as_wrong():
     """Knocking a block off the table doesn't dodge the penalty."""
     d = done()
     s = state(**dict(d, block_1=block("block_1", 0.2, 0.7, t.TOP - 0.75)))
-    assert approx(t.score(s), (5 - 3) / 6)
-    assert t.score(state(block_1=block("block_1", 0.2, 0.7, t.TOP - 0.75))) == 0.0
+    assert approx(sort_score(s), (5 - 3) / 6)
+    assert sort_score(state(block_1=block("block_1", 0.2, 0.7, t.TOP - 0.75))) == 0.0
 
 
 def test_stacked_block_does_not_count():
     d = done()
     under = d["block_5"]
     s = state(**dict(d, block_1=block("block_1", under.pos[0], under.pos[1], under.high[2])))
-    assert approx(t.score(s), 5 / 6)
+    assert approx(sort_score(s), 5 / 6)
 
 
 def test_block_on_divider_or_wall_does_not_count():
     s = state(block_4=block("block_4", 0.30, -0.265, t.TOP + t.TRAY_H))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_block_outside_tray_walls_does_not_count():
     (cx, cy), (ix, _) = t.TRAYS["accept"]["center"], t.TRAYS["accept"]["inner"]
     s = state(block_2=block("block_2", cx + ix / 2 + 0.03, cy, t.TOP))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_block_on_its_side_in_right_tray_counts():
     """Orientation in the tray doesn't matter: only the sort is scored."""
     d = done()
     s = state(**dict(d, block_2=at("block_2", "accept", 0, on_side=True)))
-    assert t.score(s) == 1.0
+    assert sort_score(s) == pytest.approx(1.0)
 
 
 def test_block_left_in_gauge_counts_neither_way():
     s = state(block_5=block("block_5", t.BAR["x0"], t.LANE["nogo"], t.TOP))
-    assert t.score(s) == 0.0
+    assert sort_score(s) == 0.0
 
 
 def test_score_bounded():
     for s in (state(), state(**done())):
-        assert 0.0 <= t.score(s) <= 1.0
+        assert 0.0 <= sort_score(s) <= 1.0
 
 
 # -- the demo ------------------------------------------------------------------------------------------------------
@@ -275,15 +335,7 @@ def test_demo_fits_run_limit_and_uses_three_trays():
 
 
 # -- the layouts -----------------------------------------------------------------------------------------------------
-def test_every_place_holds_each_kind_once_over_the_layouts():
-    """Where a block lies says nothing about its height: over A, B and C each place holds an undersize, a good and an
-    oversize block once, and each row holds one of each kind."""
-    kinds = {L: [t.kind(f"block_{k}") for k in ks] for L, ks in t.LAYOUTS.items()}
-    for i in range(len(t.SLOTS)):
-        assert sorted(kinds[L][i] for L in t.LAYOUTS) == ["accept", "over", "under"]
-    for ks in kinds.values():
-        assert sorted(ks[:3]) == sorted(ks[3:]) == ["accept", "over", "under"]
-    assert all(sorted(ks) == sorted(t.SIZES) for ks in [[f"block_{k}" for k in v] for v in t.LAYOUTS.values()])
+
 
 
 @pytest.fixture
@@ -327,16 +379,14 @@ def test_full_and_blind_scores_in_every_layout(layouts):
         for n in m.PARTS:
             (cx, cy) = m.TRAYS[m.kind(n)]["center"]
             L, W, H = m.PARTS[n]["size"]
-            c = np.array((cx + (-0.04, 0.04)[used[m.kind(n)]], cy, m.TOP + m.TRAY_FLOOR + H / 2))
+            c = np.array((cx + (-0.04, 0.04)[used[m.kind(n)] % 2], cy + 0.05 * (used[m.kind(n)] // 2), m.TOP + m.TRAY_FLOOR + H / 2))
             d[n] = SimpleNamespace(pos=c, low=c - np.array((L, W, H)) / 2, high=c + np.array((L, W, H)) / 2,
                                    resting=lambda: True)
             used[m.kind(n)] += 1
         tcps = {f"{a}_tcp": point(p) for a, p in m.PARK.items()}
-        assert m.score({**d, **tcps}) == 1.0
+        h = m.TAG["size"] / 2
+        c = np.array((*m.LOT_PADS[m.lot_decision()]["center"], m.TOP + m.PAD_H + h))
+        d["lot_tag"] = SimpleNamespace(pos=c, low=c - h, high=c + h, resting=lambda: True)
+        assert m.score({**d, **tcps}) == pytest.approx(1.0)
 
 
-def test_memorising_a_layout_by_place_scores_zero_in_the_others():
-    """Sorting by where a block lies, with the answer of one layout, puts all six in a wrong tray in the other two."""
-    kind_at = {L: {xy: t.kind(f"block_{k}") for k, xy in zip(ks, t.SLOTS)} for L, ks in t.LAYOUTS.items()}
-    for a, b in itertools.permutations(t.LAYOUTS, 2):
-        assert all(kind_at[a][xy] != kind_at[b][xy] for xy in t.SLOTS)

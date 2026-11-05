@@ -1,15 +1,16 @@
-# Sort machined blocks with a two-limit go/no-go gauge
+# Inspect a lot with a two-limit gauge and release or hold it
 
-Six machined aluminium blocks lie in two rows on the bench, in one of three layouts (A, B, C). They look alike, but they come in three heights, 3.5 mm
-apart: two are in tolerance (3.55 cm), two oversize (3.90 cm) and two undersize (3.20 cm); their lengths, widths and
-masses vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond them: a green GO bar
-whose underside is 3.75 cm above the table and, beside it, a red NO-GO bar at 3.40 cm. A good block slides under the
-GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides under both. The robot
-must gauge every block against both limits and put it in the green ACCEPT, red OVERSIZE or blue UNDERSIZE tray. A
-wrongly sorted (or dropped) block cancels three correct ones, so guessing, gauging with one bar only or putting
-everything in one tray scores 0 (the best blind strategy averages 0.056). Across the three layouts every place holds an
-undersize, a good and an oversize block once, so where a block lies says nothing about it; the task's score is the
-mean over one trial of each layout.
+A lot of six machined aluminium blocks lies in two rows on the bench. They look alike, but they come in three heights
+3.5 mm apart: in tolerance (3.55 cm), oversize (3.90 cm) and undersize (3.20 cm), how many of each depending on the lot;
+their lengths, widths and masses vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond
+them: a green GO bar whose underside is 3.75 cm above the table and, beside it, a red NO-GO bar at 3.40 cm. A good block
+slides under the GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides under
+both. The robot must gauge every block against both limits and put it in the green ACCEPT, red OVERSIZE or blue UNDERSIZE
+tray, then decide the lot: a yellow lot tag goes on the green RELEASE pad if at most 2 of the 6 are out of tolerance,
+otherwise on the red HOLD pad. Lots A, B and C have 4, 2 and 3 rejects, so the decision can only come from the count. A
+wrongly sorted (or dropped) block cancels three correct ones, so guessing, gauging with one bar only or putting everything
+in one tray scores 0; the tag earns nothing without the full sort, and the wrong pad caps the trial at 0.2. The task's
+score is the mean over one trial of each lot.
 
 The task file is [`task.py`](task.py) (scene, scoring and scripted demo). Setup, scoring and fidelity are in
 [`task.json`](task.json). Everything in the scene is a simulator primitive (boxes). The embodiment `yam_gauge`
@@ -41,13 +42,13 @@ From this folder, once per layout (`GAUGE_LAYOUT` = `A`, `B` or `C`; `A` if unse
 # Dream-1
 GAUGE_LAYOUT=A inspect-robots run --embodiment yam_gauge --policy dream \
   -E task=task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray." \
+  --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray; then put the yellow lot tag on the green RELEASE pad if at most 2 of the 6 blocks were out of tolerance, otherwise on the red HOLD pad." \
   --scorer task_score --max-steps 3600 --store-frames --log-dir ~/yam-eval/gauge-sorting/dream-A
 
 # The scripted demo (reaches 1.0)
 GAUGE_LAYOUT=A inspect-robots run --embodiment yam_gauge --policy yam_scripted \
   -E task=task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray." \
+  --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray; then put the yellow lot tag on the green RELEASE pad if at most 2 of the 6 blocks were out of tolerance, otherwise on the red HOLD pad." \
   --scorer task_score --max-steps 3600 --store-frames --log-dir ~/yam-eval/gauge-sorting/demo-A
 ```
 

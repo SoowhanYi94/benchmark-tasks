@@ -1,14 +1,16 @@
-"""On the station table: six machined aluminium blocks lie flat in two rows of three near the arms. They look alike,
-but they come in three heights: two are in tolerance (35.5 mm), two are 3.5 mm oversize and two 3.5 mm undersize, and
-their lengths and widths vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond them:
+"""On the station table: a lot of six machined aluminium blocks lies flat in two rows of three near the arms. They look
+alike, but they come in three heights: in tolerance (35.5 mm), 3.5 mm oversize and 3.5 mm undersize, how many of each
+depending on the lot, and their lengths and widths vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond them:
 a green GO bar on the left (its underside 37.5 mm above the table) and a red NO-GO bar on the right (34.0 mm). A good
 block slides under the GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides
 under both. The robot must gauge every block and put the good ones in the green ACCEPT tray on the left, the oversize
-ones in the red OVERSIZE tray and the undersize ones in the blue UNDERSIZE tray, both on the right.
-Three layouts (A, B, C) say which block lies where; the environment variable GAUGE_LAYOUT picks one (A by default).
+ones in the red OVERSIZE tray and the undersize ones in the blue UNDERSIZE tray, both on the right. Then it decides the
+lot: a yellow lot tag goes on the green RELEASE pad if at most 2 of the 6 are out of tolerance, otherwise on the red
+HOLD pad. Three lots (A, B, C) say which block lies where and what it measures; the environment variable GAUGE_LAYOUT
+picks one (A by default).
 
 Run it:  GAUGE_LAYOUT=A inspect-robots run --embodiment yam_gauge -E task=tasks/gauge-sorting/task.py \\
-           --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray." --scorer task_score ...
+           --instruction "Check each block, lying flat, with the two-bar gauge: put blocks that slide under the green GO bar but not under the red NO-GO bar in the green ACCEPT tray, blocks that don't fit under the GO bar in the red OVERSIZE tray, and blocks that also slide under the NO-GO bar in the blue UNDERSIZE tray; then put the yellow lot tag on the green RELEASE pad if at most 2 of the 6 blocks were out of tolerance, otherwise on the red HOLD pad." --scorer task_score ...
 
 `yam_gauge` (gauge_sorting/embodiment.py) is the stock yam_arena embodiment that also reports `left_tcp` and
 `right_tcp`, so the scorer can tell whether a block has been let go.
@@ -45,14 +47,14 @@ POSTS = (0.12, 0.0, -0.12)  # post centres (y)
 # oversize 39.0 mm (1.5 mm over GO). Lengths and widths vary so that footprint and mass don't tell the kinds apart.
 UNDER_H, GOOD_H, OVER_H = 0.0320, 0.0355, 0.0390
 FRONT_X, BACK_X = 0.10, 0.175
-SIZES = {
-    "block_1": (0.064, 0.044, UNDER_H),
-    "block_2": (0.060, 0.042, GOOD_H),
-    "block_3": (0.054, 0.041, OVER_H),
-    "block_4": (0.056, 0.041, OVER_H),
-    "block_5": (0.056, 0.040, UNDER_H),
-    "block_6": (0.055, 0.040, GOOD_H),
+FOOTPRINTS = {1: (0.064, 0.044), 2: (0.060, 0.042), 3: (0.054, 0.041), 4: (0.056, 0.041), 5: (0.056, 0.040), 6: (0.055, 0.040)}
+_U, _G, _O = UNDER_H, GOOD_H, OVER_H
+HEIGHTS = {  # what each block (1 to 6) measures in each lot: 4, 2 and 3 of the 6 out of tolerance
+    "A": (_U, _G, _O, _O, _U, _G),
+    "B": (_G, _U, _O, _G, _G, _G),
+    "C": (_O, _G, _U, _G, _O, _G),
 }
+MAX_REJECTS = 2  # the lot's acceptance number: at most this many out of tolerance, and it is released
 # Six places, front row then back row, each left to right (+y first). Three layouts say which block goes where; each
 # place holds an undersize, a good and an oversize block once over the three, so where a block lies says nothing.
 # GAUGE_LAYOUT picks one for a run (A by default).
@@ -63,6 +65,7 @@ LAYOUTS = {
     "C": (3, 5, 6, 2, 4, 1),  # front: over, under, good; back: good, over, under
 }
 LAYOUT = os.environ.get("GAUGE_LAYOUT", "A").upper()
+SIZES = {f"block_{k}": (*FOOTPRINTS[k], HEIGHTS[LAYOUT][k - 1]) for k in FOOTPRINTS}
 PARTS = {f"block_{k}": dict(size=SIZES[f"block_{k}"], start=xy) for k, xy in zip(LAYOUTS[LAYOUT], SLOTS)}
 PARTS = {n: PARTS[n] for n in SIZES}  # in block-number order
 
@@ -82,6 +85,12 @@ TRAYS = {
     "under": dict(center=(0.30, -0.3225), inner=(0.16, 0.105), color=BLUE, walls=("far", "near", "right")),
 }
 WRONG_PENALTY = 3.0  # a block in the wrong tray, or off the table, cancels three correct ones
+# -- the lot decision: a yellow tag (a 3 cm cube) and a green RELEASE and a red HOLD pad, on the left near the arms ----
+TAG = dict(start=(0.10, 0.17), size=0.03, mass=0.03)
+LOT_PADS = {"release": dict(center=(0.10, 0.24), color=GREEN), "hold": dict(center=(0.17, 0.205), color=RED)}
+PAD_SIZE, PAD_H = 0.06, 0.003
+YELLOW = (0.95, 0.80, 0.10)
+SORT_SHARE, LOT_SHARE, WRONG_LOT_CAP = 0.7, 0.3, 0.2
 HANDS_CLEAR = 0.02  # a block counts only when both fingertip centres are this far from its bounding box
 
 
@@ -121,6 +130,9 @@ OBJECTS = [
     *[b for n, t in TRAYS.items() for b in _tray(n, t)],
     *[Box(n, pos=(*p["start"], TOP + p["size"][2] / 2), size=p["size"], mass=ALU_DENSITY * float(np.prod(p["size"])),
           color=ALU) for n, p in PARTS.items()],
+    *[Box(f"{n}_pad", pos=(*d["center"], TOP + PAD_H / 2), size=(PAD_SIZE, PAD_SIZE, PAD_H), color=d["color"])
+      for n, d in LOT_PADS.items()],
+    Box("lot_tag", pos=(*TAG["start"], TOP + TAG["size"] / 2), size=(TAG["size"],) * 3, mass=TAG["mass"], color=YELLOW),
 ]
 
 
@@ -155,15 +167,39 @@ def _sorted(objects):
     return correct, wrong
 
 
+def lot_decision():
+    """What the lot's measurements call for: 'release' or 'hold'."""
+    return "release" if sum(kind(n) != "accept" for n in PARTS) <= MAX_REJECTS else "hold"
+
+
+def tag_on(objects):
+    """The pad the lot tag is resting on, let go (centre over the pad, underside within 1 cm of it, still, both
+    fingertip centres 2 cm or more away), or None."""
+    o = objects["lot_tag"]
+    for pad, d in LOT_PADS.items():
+        (cx, cy) = d["center"]
+        if (abs(o.pos[0] - cx) <= PAD_SIZE / 2 and abs(o.pos[1] - cy) <= PAD_SIZE / 2 and o.low[2] <= TOP + PAD_H + 0.01
+                and o.resting() and hands_clear("lot_tag", objects)):
+            return pad
+    return None
+
+
 def success(objects):
-    return _sorted(objects)[0] == len(PARTS)
+    return _sorted(objects)[0] == len(PARTS) and tag_on(objects) == lot_decision()
 
 
 def score(objects):
-    """(blocks in the right tray - 3 x blocks in a wrong tray or off the table) / 6, at least 0. Blocks anywhere else
-    on the table count neither way."""
+    """0.7 x (blocks in the right tray - 3 x blocks in a wrong tray or off the table) / 6, at least 0; +0.3 with all
+    six right and the lot tag on the right pad. The tag on the wrong pad caps the score at 0.2. Blocks anywhere else on
+    the table count neither way."""
     correct, wrong = _sorted(objects)
-    return float(max(0.0, correct - WRONG_PENALTY * wrong) / len(PARTS))
+    s = SORT_SHARE * max(0.0, correct - WRONG_PENALTY * wrong) / len(PARTS)
+    tag = tag_on(objects)
+    if tag is None:
+        return float(s)
+    if tag != lot_decision():
+        return float(min(s, WRONG_LOT_CAP))
+    return float(s + LOT_SHARE * (correct == len(PARTS)))
 
 
 # -- scripted demo ----------------------------------------------------------------------------------------------------
@@ -176,7 +212,8 @@ REAR_GRIP = 0.025  # blocks are held this far in from their rear end, so the fin
 FINGER_PER_M = -FINGER_OPEN / 0.094  # finger joint per metre of opening (the gripper opens 94 mm)
 SIDE = {"left": 1, "right": -1}
 ARM = {"accept": "left", "over": "right", "under": "right"}  # each block goes with the arm on its tray's side
-PLACES = [0.26, 0.34]  # x of the two blocks in each tray, on its centre line
+PLACES = [0.26, 0.34]  # x of the two blocks in each tray half, on its centre line
+ACCEPT_PLACES = [(0.26, 0.225), (0.34, 0.225), (0.26, 0.315), (0.34, 0.315)]  # up to four good blocks
 PARK = {a: (0.15, SIDE[a] * 0.33, TOP + 0.18) for a in SIDE}  # out of the way, above the trays' near walls
 NAMES = {"go": "GO", "nogo": "NO-GO"}
 ORDER = sorted(PARTS, key=lambda n: (-PARTS[n]["start"][0], -PARTS[n]["start"][1]))  # back row first, left to right
@@ -258,9 +295,23 @@ def demo():
     used = {t: 0 for t in TRAYS}
     for name in ORDER:  # one arm at the gauge at a time
         t = kind(name)
-        _inspect(plan, name, (PLACES[used[t]], TRAYS[t]["center"][1]))
+        place = ACCEPT_PLACES[used[t]] if t == "accept" else (PLACES[used[t]], TRAYS[t]["center"][1])
+        _inspect(plan, name, place)
         used[t] += 1
         plan.sync()
+    # the lot's decision, from the count of rejects: the left arm moves the tag to its pad
+    (tx, ty), (px, py) = TAG["start"], LOT_PADS[lot_decision()]["center"]
+    gz = TOP + 0.02
+    plan.go("left", 1.3, (tx, ty, Z_UP), opening(TAG["size"]), "lot_tag: above it", 0.0)
+    plan.go("left", 1.0, (tx, ty, gz), label="descend")
+    plan.go("left", 0.6, finger=FINGER_CLOSED, label="grip")
+    plan.go("left", 0.8, (tx, ty, Z_UP), label="lift")
+    plan.go("left", 1.2, (px, py, Z_UP), label="over the lot's pad")
+    plan.go("left", 0.9, (px, py, gz + PAD_H + 0.002), label="lower")
+    plan.go("left", 0.4, finger=opening(TAG["size"]), label="release")
+    plan.go("left", 0.6, (px, py, Z_UP), label="up")
+    plan.go("left", 1.0, PARK["left"], label="clear")
+    plan.sync()
     return plan.wps
 
 
