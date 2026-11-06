@@ -1,0 +1,19 @@
+{
+  "title": "Splice a parted joint in a rod line",
+  "category": "Impact on jobs",
+  "keywords": [
+    "fault finding",
+    "linkage",
+    "maintenance",
+    "observation"
+  ],
+  "instruction": "Restore the drive, work the handle to confirm the gate opens, then move both hands away.",
+  "context": "Maintenance technicians trace a dead linkage by working it and following the motion to where it stops. The fault can't be seen at rest, only by working the line first.",
+  "setup": "Station table. One steel-grey guide frame, 6 cm wide, 2.4 cm high and 53 cm long, with a red strip along it, lies along y at x = 28 cm from the arm bases' midpoint. On it, end to end, two aluminium bars 2.4 cm wide and 1 cm thick, their undersides 3 cm above the table, 41 cm long overall, each on a spring-return slide with 4 cm of travel toward the handle end, about 0.5 N at home and 1.5 N at full travel. An orange steel handle pad (6 x 2 x 6 cm) is fixed to the bar at the -y end and a blue steel gate (8 x 3 x 6 cm) to the bar at the +y end; the gate opens as it moves toward the handle. The line has four identical split steel collars 3.4 x 1.4 x 1.6 cm, at y = -12, -4, +4 and +12 cm, with an 8 mm square steel stud 1.2 cm tall on the bar either side of each, 3 cm from the collar. One collar marks the parted joint where the two bars meet; the other three are inside a bar. They look the same at rest. Which one has parted is set by the lot: A at -12, B at -4, C at +4, D at +12. A yellow splice plate (9 x 4.8 cm, 6 mm thick, 60 g), lying along y, with two 2.4 x 2 cm slots spaced to fit over a joint's studs and a 2.4 cm square grip 3.4 cm tall stands on a 5 x 5 x 3 cm steel stand at (15, 0) cm. Positions in y are from the table's centre line. Friction on the line is 0.3. The screenshot shows lot A.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint. 0 unless the splice plate is seated across the parted joint, with each bar's studs through its slots: flat within 5 degrees, along the line within 15 degrees, its underside within 3 mm of the bars' top, and centred on the line within 8 mm. It's also 0 while a hand is within 6 cm of the plate, or if the plate is across a sound joint. 0.4 for that alone. 0.7 if, at any moment in the run with the plate seated, the handle has moved 3.5 cm or more and the gate 2 cm or more, with no hand within 6 cm of the gate or the bar it's on. 1.0 if the bars end within 5 mm of home and, for the last 1 s, the plate has been at rest (under 1 cm/s and 0.5 rad/s) with both hands 8 cm or more from the line and the plate. Trials are run on each of lots A to D and averaged.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Set the plate back on its stand and let the springs return the bars. Nothing is consumed. Lots change which joint has parted.",
+  "fidelity": "A rigid-body simulation of a simplified line: straight bars on ideal slides, drawn collars, no fasteners. Spring forces are modelled as drives, and the plate drives the line through its slots with about 12 mm of lost motion. Real joints would use pins or bolts; the plate is simply seated here, because the skill tested is finding the fault. The bars don't collide with each other, so pushing the gate directly slides the driven bar through the drive bar; that earns nothing.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-BTFZSN"
+}
