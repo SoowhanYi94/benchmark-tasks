@@ -1,6 +1,6 @@
 """On the station table: a lot of six machined aluminium blocks lies flat in two rows of three near the arms. They look
 alike, but they come in three heights: in tolerance (35.5 mm), 3.5 mm oversize and 3.5 mm undersize, how many of each
-depending on the lot, and their lengths and widths vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond them:
+depending on the lot, and their lengths and widths vary so that footprint and mass do not tell the kinds apart. A fixed two-limit bridge gauge stands beyond them:
 a green GO bar on the left (its underside 37.5 mm above the table) and a red NO-GO bar on the right (34.0 mm). A good
 block slides under the GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides
 under both. The robot must gauge every block and put the good ones in the green ACCEPT tray on the left, the oversize
@@ -51,18 +51,18 @@ FOOTPRINTS = {1: (0.064, 0.044), 2: (0.060, 0.042), 3: (0.054, 0.041), 4: (0.056
 _U, _G, _O = UNDER_H, GOOD_H, OVER_H
 HEIGHTS = {  # what each block (1 to 6) measures in each lot: 4, 2 and 3 of the 6 out of tolerance
     "A": (_U, _G, _O, _O, _U, _G),
-    "B": (_G, _U, _O, _G, _G, _G),
-    "C": (_O, _G, _U, _G, _O, _G),
+    "B": (_G, _U, _G, _O, _G, _G),
+    "C": (_O, _G, _G, _G, _U, _O),
 }
 MAX_REJECTS = 2  # the lot's acceptance number: at most this many out of tolerance, and it is released
-# Six places, front row then back row, each left to right (+y first). Three layouts say which block goes where; each
-# place holds an undersize, a good and an oversize block once over the three, so where a block lies says nothing.
+# Six places, front row then back row, each left to right (+y first). Three layouts say which block goes where; no
+# place and no block number has the same kind in all three lots, so neither gives the kind away.
 # GAUGE_LAYOUT picks one for a run (A by default).
 SLOTS = [(FRONT_X, 0.08), (FRONT_X, 0.0), (FRONT_X, -0.08), (BACK_X, 0.08), (BACK_X, 0.0), (BACK_X, -0.08)]
 LAYOUTS = {
     "A": (1, 2, 3, 4, 5, 6),  # front: under, good, over; back: over, under, good
-    "B": (2, 3, 1, 5, 6, 4),  # front: good, over, under; back: under, good, over
-    "C": (3, 5, 6, 2, 4, 1),  # front: over, under, good; back: good, over, under
+    "B": (2, 3, 1, 5, 6, 4),  # front: under, good, good; back: good, good, over
+    "C": (3, 5, 4, 2, 6, 1),  # front: good, under, good; back: good, over, over
 }
 LAYOUT = os.environ.get("GAUGE_LAYOUT", "A").upper()
 SIZES = {f"block_{k}": (*FOOTPRINTS[k], HEIGHTS[LAYOUT][k - 1]) for k in FOOTPRINTS}
@@ -84,7 +84,7 @@ TRAYS = {
     "over": dict(center=(0.30, -0.2075), inner=(0.16, 0.105), color=RED, walls=("far", "near", "left", "right")),
     "under": dict(center=(0.30, -0.3225), inner=(0.16, 0.105), color=BLUE, walls=("far", "near", "right")),
 }
-WRONG_PENALTY = 3.0  # a block in the wrong tray, or off the table, cancels three correct ones
+WRONG_PENALTY = 5.0  # a block in the wrong tray, or off the table, cancels five correct ones, so one-bar gauging earns 0
 # -- the lot decision: a yellow tag (a 3 cm cube) and a green RELEASE and a red HOLD pad, on the left near the arms ----
 TAG = dict(start=(0.10, 0.17), size=0.03, mass=0.03)
 LOT_PADS = {"release": dict(center=(0.10, 0.24), color=GREEN), "hold": dict(center=(0.17, 0.205), color=RED)}
@@ -189,7 +189,7 @@ def success(objects):
 
 
 def score(objects):
-    """0.7 x (blocks in the right tray - 3 x blocks in a wrong tray or off the table) / 6, at least 0; +0.3 with all
+    """0.7 x (blocks in the right tray - 5 x blocks in a wrong tray or off the table) / 6, at least 0; +0.3 with all
     six right and the lot tag on the right pad. The tag on the wrong pad caps the score at 0.2. Blocks anywhere else on
     the table count neither way."""
     correct, wrong = _sorted(objects)

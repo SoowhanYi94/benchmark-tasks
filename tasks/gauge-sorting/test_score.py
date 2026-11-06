@@ -1,5 +1,5 @@
 """The score must credit each block only in the tray its two gauge limits send it to, once it is let go and still;
-cancel three correct blocks for each block in a wrong tray or off the table; and give blind or one-sided play nothing
+cancel five correct blocks for each block in a wrong tray or off the table; and give blind or one-sided play nothing
 (or next to nothing)."""
 import importlib
 import itertools
@@ -177,12 +177,12 @@ def test_partial_correct(k):
     assert approx(sort_score(s), k / 6) and not t.success(s)
 
 
-def test_one_wrong_cancels_three():
+def test_one_wrong_cancels_five():
     d = done()
     wrong = "block_1"  # undersize, into ACCEPT
     s = state(**dict(d, block_1=at(wrong, "accept", 1)))
     s["block_2"] = at("block_2", "accept", 0)
-    assert approx(sort_score(s), (5 - 3) / 6) and not t.success(s)
+    assert approx(sort_score(s), (5 - 5) / 6) and not t.success(s)
 
 
 def test_two_wrong_score_zero():
@@ -273,7 +273,7 @@ def test_held_wrong_block_still_counts_as_wrong_once_let_go_only():
     s["right_tcp"] = point(wrong.pos)
     assert approx(sort_score(s), 5 / 6)
     s["right_tcp"] = point(PARK["right_tcp"])
-    assert approx(sort_score(s), (5 - 3) / 6)
+    assert approx(sort_score(s), (5 - 5) / 6)
 
 
 def test_moving_block_does_not_count():
@@ -286,7 +286,7 @@ def test_block_dropped_off_table_counts_as_wrong():
     """Knocking a block off the table doesn't dodge the penalty."""
     d = done()
     s = state(**dict(d, block_1=block("block_1", 0.2, 0.7, t.TOP - 0.75)))
-    assert approx(sort_score(s), (5 - 3) / 6)
+    assert approx(sort_score(s), (5 - 5) / 6)
     assert sort_score(state(block_1=block("block_1", 0.2, 0.7, t.TOP - 0.75))) == 0.0
 
 
@@ -390,3 +390,44 @@ def test_full_and_blind_scores_in_every_layout(layouts):
         assert m.score({**d, **tcps}) == pytest.approx(1.0)
 
 
+# -- the three lots, as a plan that never gauges sees them (no simulator state needed) --------------------------------
+def _lot_kinds(lot):
+    """Kind at each place, front row then back."""
+    h = t.HEIGHTS[lot]
+    return ["over" if h[b - 1] >= t.GO_H else "under" if h[b - 1] < t.NOGO_H else "accept" for b in t.LAYOUTS[lot]]
+
+
+def _lot_score(plan, tag, lot):
+    kinds = _lot_kinds(lot)
+    right = sum(d == k for d, k in zip(plan, kinds))
+    wrong = sum(d is not None and d != k for d, k in zip(plan, kinds))
+    s = t.SORT_SHARE * max(0.0, right - t.WRONG_PENALTY * wrong) / 6
+    rejects = sum(k != "accept" for k in kinds)
+    decision = "release" if rejects <= t.MAX_REJECTS else "hold"
+    if tag is None:
+        return s
+    return min(s, t.WRONG_LOT_CAP) if tag != decision else s + t.LOT_SHARE * (right == 6)
+
+
+def test_no_place_or_block_has_one_kind_in_every_lot():
+    lots = list(t.LAYOUTS)
+    assert all(len({_lot_kinds(x)[i] for x in lots}) > 1 for i in range(6))
+    assert all(len({t.HEIGHTS[x][i] for x in lots}) > 1 for i in range(6))
+
+
+def test_reject_counts_force_the_decision_from_the_count():
+    assert [sum(k != "accept" for k in _lot_kinds(x)) for x in "ABC"] == [4, 2, 3]
+
+
+def test_a_plan_that_never_gauges_can_match_only_one_lot():
+    best = max(sum(_lot_score(p, tag, x) for x in "ABC") / 3
+               for p in itertools.product((None, "accept", "over", "under"), repeat=6) for tag in (None, "hold", "release"))
+    assert best == pytest.approx(1 / 3)
+
+
+@pytest.mark.parametrize("lot", list("ABC"))
+def test_one_bar_gauging_scores_zero_in_every_lot(lot):
+    kinds = _lot_kinds(lot)
+    go_only = ["over" if k == "over" else "accept" for k in kinds]
+    nogo_only = ["under" if k == "under" else "accept" for k in kinds]
+    assert _lot_score(go_only, None, lot) == 0 and _lot_score(nogo_only, None, lot) == 0

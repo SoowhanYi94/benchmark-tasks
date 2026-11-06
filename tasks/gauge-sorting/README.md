@@ -2,14 +2,14 @@
 
 A lot of six machined aluminium blocks lies in two rows on the bench. They look alike, but they come in three heights
 3.5 mm apart: in tolerance (3.55 cm), oversize (3.90 cm) and undersize (3.20 cm), how many of each depending on the lot;
-their lengths, widths and masses vary so that nothing else gives them away. A fixed two-limit bridge gauge stands beyond
+their lengths, widths and masses vary so that those do not tell the kinds apart. A fixed two-limit bridge gauge stands beyond
 them: a green GO bar whose underside is 3.75 cm above the table and, beside it, a red NO-GO bar at 3.40 cm. A good block
 slides under the GO bar but stops at the NO-GO bar; an oversize one stops at the GO bar; an undersize one slides under
 both. The robot must gauge every block against both limits and put it in the green ACCEPT, red OVERSIZE or blue UNDERSIZE
 tray, then decide the lot: a yellow lot tag goes on the green RELEASE pad if at most 2 of the 6 are out of tolerance,
 otherwise on the red HOLD pad. Lots A, B and C have 4, 2 and 3 rejects, so the decision can only come from the count. A
-wrongly sorted (or dropped) block cancels three correct ones, so guessing, gauging with one bar only or putting everything
-in one tray scores 0; the tag earns nothing without the full sort, and the wrong pad caps the trial at 0.2. The task's
+wrongly sorted (or dropped) block cancels five correct ones, so gauging with one bar only or putting everything in one tray
+scores 0, and a fixed plan that never gauges can match only one lot (at most about 1/3 on the mean); the tag earns nothing without the full sort, and the wrong pad caps the trial at 0.2. The task's
 score is the mean over one trial of each lot.
 
 The task file is [`task.py`](task.py) (scene, scoring and scripted demo). Setup, scoring and fidelity are in
@@ -53,7 +53,7 @@ GAUGE_LAYOUT=A inspect-robots run --embodiment yam_gauge --policy yam_scripted \
 ```
 
 The run prints `task_score` at the end; the episode ends early, with `termination_reason="success"`, once every block
-has been in its tray for 1 s. Videos: `inspect-robots video <log>.json`. `GAUGE_DEBUG=1` prints the blocks, the
+has been in its right tray and the tag on the right pad for 1 s. Videos: `inspect-robots video <log>.json`. `GAUGE_DEBUG=1` prints the blocks, the
 fingertips and the score four times a second. `python -m pytest -q test_score.py` tests the scorer against every
 outcome in the scoring rules and the exploits we found (held, moving, stacked or dropped blocks, one-bar gauging,
 blind play, the tag without the sort), checks every lot's scene, and checks that each layout's
@@ -62,7 +62,7 @@ demo fits the run limit and that IK reaches every waypoint. `python task.py` run
 
 - **Seeds:** none needed. `-E object_jitter=0` keeps the fixed layout of each lot, which the scripted demo (open loop) needs and
   the setup describes; the default seed is 0. The lot is set by `GAUGE_LAYOUT`, not by the seed.
-- **Runtime per trial:** the scripted demo took 2,205 steps in lots A and C and 2,303 in lot B (about 110 s simulated), succeeding 1 s after
+- **Runtime per trial:** the scripted demo took 2,205 steps in lots A and C and 2,303 in lot B (110 to 115 s simulated), succeeding 1 s after
   the lot tag is let go. A Dream-1 trial runs up to 3,600 steps.
 
 ## How the demo does it
