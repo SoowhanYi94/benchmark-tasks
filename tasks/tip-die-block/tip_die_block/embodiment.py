@@ -1,4 +1,4 @@
-"""`yam_tip`: the stock yam_arena embodiment plus the rubber-matted lane and the marked die block, the harness unchanged.
+"""`yam_tip`: the stock yam_arena embodiment plus the rubber-matted lane and the marked block, the harness unchanged.
 The task file lists two placeholder boxes that are spawned as them. The block's state is its own frame: its centre, its
 +z the red face's outward normal. The scorer also gets `left_tcp` and `right_tcp` (each gripper's fingertip midpoint)."""
 
@@ -85,6 +85,10 @@ def _rigid(prim, kinematic=False, mass=None):
 
 
 class TipEmbodiment(YamArenaEmbodiment):
+    def reset(self, scene, *, seed=None):
+        self.task.module.reset_latch()
+        return super().reset(scene, seed=seed)
+
     def _ensure_sim(self, goal):
         import atexit
         import math
@@ -190,6 +194,8 @@ class TipEmbodiment(YamArenaEmbodiment):
             result = super()._task_step()
         finally:
             scene.object_states = original
+        if "s" in last:
+            self.task.module.note_step(last["s"], 1.0 / self.info.control_hz)
         if DEBUG and "s" in last and round(self._t * self.info.control_hz) % round(self.info.control_hz / 4) == 0:
             m, st = self.task.module, last["s"]
             b = st[BLOCK]

@@ -1,19 +1,20 @@
 {
-  "title": "Tip a die block over its edges until its datum face is up",
+  "title": "Tip a block over its edges until its red face is up",
   "category": "Impact on jobs",
   "keywords": [
     "tipping",
-    "die block",
-    "datum face",
     "workshop handling",
+    "machining setup",
+    "reading a part's state",
     "bimanual"
   ],
-  "instruction": "Tip the die block over along the lane until its red datum face is on top, then move both hands away.",
-  "context": "Die and fixture blocks too heavy or wide to lift by hand are rolled over on the bench, edge by edge, to bring the ground datum face up before setup. A push high on a face tips the block over its edge; a push low only slides it.",
-  "setup": "Positions in cm from the midpoint between the two arm bases (61 cm apart), x forward, y left; heights from the table top (74.75 cm above the floor). Lane: a fixed black rubber mat (friction 1.0), 13 wide (x 18.5 to 31.5), 64 long (y -32 to 32), 0.5 thick, with a fixed yellow plastic curb along each long side, 1 wide and 2.5 high from the table (low friction). Die block: a painted grey cube, 12 on each edge, too wide for the 9.4 cm gripper, 500 g, centred at (25, 0) on the mat with its faces square to the lane. One face is its datum face, painted red; each of its four neighbouring faces has a 3 wide red band along the edge it shares with the red face, so the top shows a red band on the side the red face lies, and no band when the red face is underneath. Lots (one per trial): the red face is on the +y side in A, on the -y side in B, underneath in C. The screenshot shows A.",
-  "scoring": "Read at the end of the trial. Red up: the red face's outward normal within 10 degrees of straight up. In the lane: the block's centre over the mat between the curbs, and within 1 cm of its height when flat on the mat. At rest: under 1 cm/s. Hands clear: each gripper's fingertip midpoint 3 cm or more from the block's surface. 1.0 if red up, in the lane, at rest and hands clear (the trial ends once this holds 1 s). 0.5 if red up with any of the others missing. 0 otherwise, whatever else has happened. The task's score is the mean over one trial of each lot. Every lot starts with the red face not up, so doing nothing scores 0; a fixed plan can match only one lot, and scores 0 on the other two, so its mean is at most 1/3. On real arms: judge from a top-down photo after the arms withdraw, with a tape to the lane.",
+  "instruction": "Tip the block over along the lane, without lifting it, until its red face is on top, then move both hands away.",
+  "context": "Between machining operations, a block too awkward to carry is turned on the bench by tipping it over an edge, so that the next face to machine is up. A push high on a face tips it; a push low only slides it.",
+  "setup": "Positions in cm from the midpoint between the two arm bases (61 cm apart), x forward, y left; heights from the table top (74.75 cm above the floor). Lane: a fixed black rubber mat (friction 1.0), 13 wide (x 18.5 to 31.5), 64 long (y -32 to 32), 0.5 thick, with a fixed yellow plastic curb along each long side, 1 wide and 2.5 high from the table (low friction). Block: a hollow sheet-steel box, a painted grey cube, 12 on each edge, too wide for the 9.4 cm gripper, 500 g, centred at (25, 0) on the mat with its faces square to the lane. One face, the next to machine, is painted red; each of its four neighbouring faces has a 3 wide red band along the edge it shares with the red face, so the top shows a red band on the side the red face lies, and no band when the red face is underneath. Lots (one per trial): the red face is on the +y side in A, on the -y side in B, underneath in C. The screenshot shows A.",
+  "scoring": "Read at the end of the run (no early end). Red up: the red face's outward normal within 5 degrees of straight up. In the lane: the block's centre over the mat between the curbs, and within 3 mm of its height lying flat. At rest: under 1 cm/s and 0.5 rad/s for the last 1 s. Hands clear: each gripper's fingertip midpoint (13 mm short of the pad tips) 3 cm or more from the block's surface. Lifted: its centre ever more than 3 cm above its flat height (a tip peaks at 2.5 cm). 0 if lifted at any time, or if the red face isn't up in the lane. 1.0 if red up, in the lane, at rest and hands clear. 0.5 if red up in the lane, not lifted, with the block not at rest or a hand not clear. The task's score is the mean over one trial of each lot. Every lot starts with the red face not up, so doing nothing scores 0; any fixed sequence of tips leaves red up in only one lot, so its mean is at most 1/3. On real arms: judge from a top-down photo after the arms withdraw, with a tape to the lane, and the lift from the video.",
   "run_limit": "1,800 steps (90 s at 20 Hz)",
   "reset_notes": "Stand the block back at (25, 0), square to the lane, turned for the next lot (A, B, C in turn).",
-  "fidelity": "Approximate. The block is 500 g to suit the arms; a solid steel block this size is about 13 kg, so its motion is the same in form but its forces are far lower. It is a rigid cube with sharp edges on a rigid mat, with friction 1.0 standing in for a rubber mat; there are no ground or chamfered edges. Three fixed lots, chosen at the start.",
-  "scores": "Dream-1 run: 0.0; demo: 1.0"
+  "fidelity": "Approximate. A hollow 500 g box stands in for a solid block, which at this size would be about 13 kg, so the forces are about 1/25 of real and a real block would be eased down, not dropped. It is a rigid cube with sharp edges on a rigid mat, with friction 1.0 standing in for a rubber mat. Three fixed lots, chosen at the start.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-PQ3Y6L"
 }

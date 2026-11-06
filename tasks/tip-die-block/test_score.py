@@ -20,6 +20,15 @@ def state(b, **kw):
     return {"die_block": b, **{k: SimpleNamespace(pos=v) for k, v in PARKED.items()}, **kw}
 
 
+def settled(b, **kw):
+    """The block has been still for the last 1 s."""
+    s = state(b, **kw)
+    t.reset_latch()
+    for _ in range(25):
+        t.note_step(s, 0.05)
+    return s
+
+
 def turned(start_deg, s):
     """The block after one tip with a hand on its ``s`` side: over its far bottom edge, a quarter turn about x."""
     return start_deg + s * 90.0
@@ -64,41 +73,70 @@ def test_doing_nothing_scores_zero(lot):
 
 
 def test_full_score(lot):
-    s = state(block(0.0, y=0.12))
-    assert t.score(s) == 1.0 and t.success(s)
+    assert t.score(settled(block(0.0, y=0.12))) == 1.0
 
 
-@pytest.mark.parametrize("deg", [9.0, -9.0])
-def test_within_ten_degrees_is_up(deg):
-    assert t.score(state(block(deg))) == 1.0
+def test_no_early_end():
+    assert not hasattr(t, "success")
 
 
-@pytest.mark.parametrize("deg", [11.0, -11.0, 45.0, 90.0, 180.0])
-def test_beyond_ten_degrees_is_not(deg):
+def test_one_still_frame_is_not_enough():
+    s = settled(block(0.0))
+    t._trial["still"] = 0.05
+    assert t.score(s) == 0.5
+
+
+def test_lifting_scores_zero_even_set_back_down():
+    s = settled(block(0.0))
+    t.note_step(state(block(0.0, dz=t.LIFTED + 0.005)), 0.05)
+    for _ in range(25):
+        t.note_step(s, 0.05)
+    assert t.score(s) == 0.0
+
+
+def test_a_tip_is_not_a_lift():
+    assert math.sqrt(2) * t.SIDE / 2 - t.SIDE / 2 < t.LIFTED
+
+
+def test_reset_clears_the_lift():
+    t.note_step(state(block(0.0, dz=t.LIFTED + 0.005)), 0.05)
+    assert t.score(settled(block(0.0))) == 1.0
+
+
+@pytest.mark.parametrize("deg", [4.0, -4.0])
+def test_within_five_degrees_is_up(deg):
+    assert t.score(settled(block(deg))) == 1.0
+
+
+@pytest.mark.parametrize("deg", [6.0, -6.0, 45.0, 90.0, 180.0])
+def test_beyond_five_degrees_is_not(deg):
     assert t.score(state(block(deg))) == 0.0
 
 
 def test_moving_is_half():
-    assert t.score(state(block(0.0, moving=True))) == 0.5
+    s = settled(block(0.0))
+    moving = state(block(0.0, moving=True))
+    t.note_step(moving, 0.05)
+    assert t.score(moving) == 0.5
 
 
-def test_off_the_mat_is_half():
-    assert t.score(state(block(0.0, y=t.LANE_Y_HALF + 0.02))) == 0.5
+def test_off_the_mat_is_zero():
+    assert t.score(settled(block(0.0, y=t.LANE_Y_HALF + 0.02))) == 0.0
 
 
-def test_held_up_on_something_is_half():
-    assert t.score(state(block(0.0, dz=0.03))) == 0.5
+def test_perched_on_something_is_zero():
+    assert t.score(settled(block(0.0, dz=0.008))) == 0.0
 
 
 @pytest.mark.parametrize("arm", ["left_tcp", "right_tcp"])
 def test_hand_near_is_half(arm):
     near = np.array((t.X0, 0.0, t.BLOCK_Z + t.SIDE / 2 + t.HANDS_CLEAR - 0.005))
-    assert t.score(state(block(0.0), **{arm: SimpleNamespace(pos=near)})) == 0.5
+    assert t.score(settled(block(0.0), **{arm: SimpleNamespace(pos=near)})) == 0.5
 
 
 def test_hand_just_clear_is_full():
     far = np.array((t.X0, 0.0, t.BLOCK_Z + t.SIDE / 2 + t.HANDS_CLEAR + 0.005))
-    assert t.score(state(block(0.0), left_tcp=SimpleNamespace(pos=far))) == 1.0
+    assert t.score(settled(block(0.0), left_tcp=SimpleNamespace(pos=far))) == 1.0
 
 
 # -- a plan that doesn't look -------------------------------------------------------------------------------------------
@@ -164,4 +202,6 @@ def test_demo_ends_clear_of_the_block(name):
     deg = _final(name, t.LOTS[name]["tips"])
     y = -sum(s * t.SIDE for _, s in t.LOTS[name]["tips"])
     s = {"die_block": block(deg, y=y), **{f"{a}_tcp": SimpleNamespace(pos=np.array(wps[a][-1].pos)) for a in wps}}
+    t.reset_latch()
+    t.note_step(s, 1.0)
     assert t.score(s) == 1.0

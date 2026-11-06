@@ -1,12 +1,12 @@
-"""On the station table: a 12 cm die block, too wide for a gripper to pick up, stands in a rubber-matted lane with low
-yellow curbs either side. One of its faces is its ground datum face, painted red; each neighbouring face has a red band
+"""On the station table: a 12 cm block, too wide for a gripper to pick up, stands in a rubber-matted lane with low
+yellow curbs either side. One of its faces, the next to be machined, is painted red; each neighbouring face has a red band
 along the edge it shares with the red face, so the top shows which way the red face lies, and no band means it is
 underneath. The robot must tip the block over its edges along the lane until the red face is up, and move both hands away.
 A push high on a face tips it; a push low only slides it. Lots A, B and C start with the red face to the left, to the
 right and underneath; the environment variable TIP_LOT picks one (A by default).
 
 Run it:  TIP_LOT=A inspect-robots run --embodiment yam_tip -E task=task.py -E object_jitter=0 --policy yam_scripted \\
-           --instruction "Tip the die block over along the lane until its red datum face is on top, then move both hands away." --scorer task_score
+           --instruction "Tip the block over along the lane, without lifting it, until its red face is on top, then move both hands away." --scorer task_score
 
 `yam_tip` (tip_die_block/embodiment.py) spawns the lane and the marked block, and reports each gripper's fingertip midpoint.
 """
@@ -26,7 +26,7 @@ SCENE = "station"
 TOP = TABLE_TOP[SCENE]
 
 SIDE = 0.12  # the block's edge: too wide for the 94 mm gripper
-BLOCK_MASS = 0.5  # a real die block this size is about 13 kg; lightened to suit the arms
+BLOCK_MASS = 0.5  # a solid block this size is about 13 kg; lightened to suit the arms
 BAND = 0.03  # the red band, along the shared edge on each face touching the red one
 X0, Y0 = 0.25, 0.0
 MAT_T = 0.005
@@ -55,8 +55,25 @@ OBJECTS = [
 ]
 
 # -- scoring -----------------------------------------------------------------------------------------------------------
-UP = math.radians(10)  # the red face's normal within this of straight up
+UP = math.radians(5)  # the red face's normal within this of straight up
 HANDS_CLEAR = 0.03  # each fingertip midpoint at least this far from the block's surface
+FLAT = 0.003  # the block's centre within this of its height lying flat
+LIFTED = 0.03  # the centre never above this over its flat height: a tip peaks at 2.5 cm (12 cm cube over its edge)
+STILL_S = 1.0  # at rest this long
+_trial = {"still": 0.0, "lifted": False}
+
+
+def reset_latch():
+    """Forget the trial: the embodiment calls this at every reset."""
+    _trial.update(still=0.0, lifted=False)
+
+
+def note_step(objects, dt):
+    """Called by the embodiment after every control step: the lift latch and the stillness clock."""
+    b = objects["die_block"]
+    _trial["lifted"] |= bool(b.pos[2] - BLOCK_Z > LIFTED)
+    _trial["still"] = _trial["still"] + dt if b.resting() else 0.0
+
 
 
 def _rot(q):
@@ -76,8 +93,8 @@ def red_up(block):
 
 
 def in_lane(block):
-    """On the mat between the curbs: its centre over the lane and no more than 1 cm above resting height."""
-    return bool(abs(block.pos[0] - X0) <= LANE_X_HALF and abs(block.pos[1] - Y0) <= LANE_Y_HALF and abs(block.pos[2] - BLOCK_Z) <= 0.01)
+    """On the mat between the curbs: its centre over the lane and within 3 mm of its height lying flat."""
+    return bool(abs(block.pos[0] - X0) <= LANE_X_HALF and abs(block.pos[1] - Y0) <= LANE_Y_HALF and abs(block.pos[2] - BLOCK_Z) <= FLAT)
 
 
 def hands_clear(objects):
@@ -91,16 +108,12 @@ def hands_clear(objects):
 
 
 def score(objects):
-    """1.0: the red face up (within 10 degrees), the block at rest in the lane, both hands clear. 0.5: the red face up with
-    any of those missing. Otherwise 0."""
+    """0 if the block was ever lifted, or the red face isn't up on the lane's mat. 1.0: at rest for 1 s with both hands
+    clear. 0.5: otherwise. Read at the end of the run: there's no early end, so a plan can't stop on the right lot."""
     b = objects["die_block"]
-    if not red_up(b):
+    if _trial["lifted"] or not (red_up(b) and in_lane(b)):
         return 0.0
-    return 1.0 if in_lane(b) and b.resting() and hands_clear(objects) else 0.5
-
-
-def success(objects):
-    return score(objects) == 1.0
+    return 1.0 if _trial["still"] >= STILL_S and hands_clear(objects) else 0.5
 
 
 # -- scripted demo -----------------------------------------------------------------------------------------------------
@@ -109,6 +122,7 @@ PAD_HALF = 0.012  # a closed finger's half thickness along the push (assumed fro
 PUSH_H = 0.09  # pad tips this far above the mat: a push above about 6 cm tips rather than slides, at mu 1
 START_GAP = 0.02  # the pad's face this far off the block before pushing
 TRAVEL = 0.12  # aims well through the block: the soft arm falls short, and the error is what makes the force
+RISE = 0.05  # the push rises as the face tilts, so the pad doesn't jam against the rising face
 HOVER = 0.15 + TOP  # TCP height while moving to the block's side
 PARK = 0.18, 0.32, TOP + 0.18
 SIDES = {"left": 1, "right": -1}
@@ -149,10 +163,11 @@ def _tip(plan, arm, s, cy):
     face = cy + s * SIDE / 2
     y0, y1 = face + s * (PAD_HALF + START_GAP), face + s * (PAD_HALF - TRAVEL)
     z = TOP + MAT_T + PUSH_H + PAD_TIP_PAST_TCP
+    z1 = z + RISE
     plan.go(arm, 1.4, (X0, y0, HOVER), FINGER_CLOSED, "beside the block", _yaw(arm))
     plan.go(arm, 0.4, label="settle")
     plan.go(arm, 1.0, (X0, y0, z), label="down to push height")
-    plan.go(arm, 2.4, (X0, y1, z), label="push it over")
+    plan.go(arm, 2.4, (X0, y1, z1), label="push it over")
     plan.go(arm, 0.8, label="let it land")
     plan.go(arm, 0.8, (X0, y1, HOVER), label="up")
     plan.go(arm, 1.2, (PARK[0], SIDES[arm] * PARK[1], PARK[2]), FINGER_OPEN, "away", 0.0)
@@ -169,7 +184,7 @@ def demo(lot=None):
     cy = Y0
     for arm, s in tips:
         cy = _tip(plan, arm, s, cy)
-    plan.go("left", 1.0, label="still")
+    plan.go("left", 2.0, label="still")
     plan.sync()
     return plan.wps
 
