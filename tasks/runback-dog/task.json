@@ -1,0 +1,19 @@
+{
+  "title": "Find and turn round a backwards anti-runback dog",
+  "category": "Impact on jobs",
+  "keywords": [
+    "fault finding",
+    "conveyor",
+    "maintenance",
+    "regrasp"
+  ],
+  "instruction": "Get the carrier to its end stop with all three dogs seated on their studs facing forward, then move both hands away.",
+  "context": "Anti-runback dogs let an inclined conveyor's carrier pass one way only. Fitted backwards, one stops the line dead, and its cover hides why, so a fitter finds it by pushing the carrier and seeing where it stops.",
+  "setup": "Station table. A black steel rail 10 cm wide, 2 cm high and 52 cm long lies along y at x = 27 cm from the arm bases' midpoint, from y = -37 to +15 cm, with a red steel end stop 6 x 1.2 x 4 cm on it at y = +13 to +14.2 cm. A blue steel carrier 2.4 x 4 cm, its top 4 cm above the table, starts on the rail at y = -12 cm with a 6 mm square yellow steel spring pin on top, 5.6 cm above the table, about 0.6 N at home. An orange steel rod 1.6 cm wide runs back from it, its top 3.5 cm above the table, to an orange steel handle pad 6 x 1.6 x 7 cm at y = -35 cm, and the carrier reaches the end stop after 23 cm. Three identical capped grey steel dogs, hollow, 9.2 x 5 cm, 10.4 cm tall to the top of a 2.4 cm square grip 3.4 cm high, 150 g each, sit on twin 8 mm square steel studs, 3 cm tall and 6 cm apart across the rail, at y = -7, 0 and +7 cm, whose 2.8 cm slots let a dog shift 1 cm each way along the rail and 5 mm across it. Under each cap a ramp lowers to a tooth, hidden from above: facing forward (tooth toward the end stop), the ramp presses the pin down as the carrier passes; turned round, the tooth stops it dead. One dog is backwards, set by the lot (A, B or C from the handle end). Positions in y are from the table's centre line. Friction is 0.3. The screenshot shows lot A.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint. 0 unless one dog is seated on each station's studs, any dog on any station, and all face forward: within 1.1 cm of the station across and along the rail, flat within 5 degrees, resting on the rail within 4 mm, and turned within 5 degrees of forward. So removing a dog, or turning a sound one, scores 0. It's also 0 while a hand is within 6 cm of a dog. 0.5 for that. 1.0 if the carrier is also within 1 cm of its end stop and, for the last 1 s, the dogs have been at rest (under 1 cm/s and 0.5 rad/s) with both hands 8 cm or more from the rail, from the handle's start to the rail's end, and from the dogs' full height above it. Trials are run on each of lots A, B and C and averaged.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Lift the dogs off, slide the carrier back to its start, reseat them with one turned round for the lot. Nothing is consumed.",
+  "fidelity": "A rigid-body simulation of a short horizontal rail, pushed by hand with no conveyor drive. The dog's ramp and tooth are simple shapes and the pin is a spring slide. A real dog is bolted down; here it's held by studs and its weight. The cap hides the fault from overhead at rest, so pushing is the natural cue; a low wrist view or lifting a dog could also show it.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-3ESUY9"
+}
