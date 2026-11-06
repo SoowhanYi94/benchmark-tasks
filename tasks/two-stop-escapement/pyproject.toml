@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robocurve-two-stop-escapement"
+version = "0.0.1"
+
+[project.entry-points."inspect_robots.embodiments"]
+yam_escapement = "two_stop_escapement.embodiment:make_embodiment"
+
+[tool.setuptools.packages.find]
+include = ["two_stop_escapement*"]
