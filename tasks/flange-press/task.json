@@ -1,0 +1,19 @@
+{
+  "title": "Press a warped flange at its high spot",
+  "category": "Impact on jobs",
+  "keywords": [
+    "fault finding",
+    "straightening",
+    "inspection",
+    "irreversible action"
+  ],
+  "instruction": "Press the warped flange at its high spot, then move both hands away.",
+  "context": "Fitters straighten warped parts by turning them against a dial indicator to find the high spot, then pressing there. The part looks plain, so the spot can only be found by turning it, and a press in the wrong place bends good metal.",
+  "setup": "Station table. A plain steel flange 24 cm across and 1 cm thick lies on a black 8 cm square pedestal with its top 3 cm above the table, centred at x = 29 cm from the arm bases' midpoint and y = -2 cm from the table's centre line, with +y toward the left arm. It turns freely and stays where it's left. An orange steel crank handle, a 2.4 cm square block 5 cm tall, stands on it 5 cm from its centre, on the -y side at the start, and swivels freely, so it stays square as the flange turns. A blue steel ram pad 6 x 3 x 4 cm hangs on a spring over the rim, 10.5 cm from the centre on the +y side, its underside 1 cm above the flange at the bottom of its 3 cm travel, about 1 N at the top and 2.5 N at the bottom. Two 1.6 cm square steel posts 13 cm tall, 4.5 cm either side of the flange's centre line and 15 cm from its centre on the +y side, and a steel bridge 10.6 x 1.6 x 1 cm across their tops carry its guide. A white plastic scale 4 x 12 cm and 1.2 cm tall lies along y at x = 9 cm, centred at y = -2 cm, with a red pointer 5 x 1.2 x 1.8 cm sliding 10 cm along it toward +y. The pointer reads 10 cm with the high spot under the ram, falling evenly to 0 at 60 degrees either side. The high spot is set by the lot, as the turn from the start that brings it under the ram, counterclockwise from above: A +60, B -60, C +120, D -120 degrees. Nothing else marks it. The screenshot shows lot A.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint. If the ram is ever pressed 2 cm or more with the flange more than 15 degrees from the lot's turn, the score is 0 for good. Otherwise 0 unless the flange ends within 15 degrees of that turn with both hands 6 cm or more from the centre of the handle's top and from the centre of the ram's top at rest. 0.5 for that alone. 0.85 if the ram was pressed 2 cm or more within those 15 degrees and is back within 3 mm of the top, with both hands 8 cm or more from those same two points. 1.0 if, for the last 1 s, the flange has also been still (under 3 degrees per second) with the ram up and hands clear. Trials are run on each of lots A to D and averaged.",
+  "run_limit": "2,400 steps (2 minutes at 20 Hz)",
+  "reset_notes": "Turn the flange back to its start, with the handle on the -y side. The press is judged from its travel, so nothing needs replacing in simulation; a real part would.",
+  "fidelity": "A rigid-body simulation: the flange doesn't actually bend, and a press is judged by the ram's travel and the flange's angle. The pointer is a read-out written from the flange's angle each step, where a real rig would use a cam and a dial indicator, and it has no physical contact with the flange. The handle's swivel is free and the turntable has light damping so it stays where it's left. Contact on the flange is a 16.8 cm square inside its round face.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-2Y5HWC"
+}
