@@ -11,11 +11,15 @@ import task as t
 from two_stop_escapement import mech as M
 
 PARKED = {"left_tcp": np.array((0.18, 0.32, t.TOP + 0.18)), "right_tcp": np.array((0.18, -0.32, t.TOP + 0.18))}
-BIN_AT = np.array((t.BIN["center"][0], t.BIN["center"][1], t.TOP + 0.01))
+BIN_AT = np.array((t.BIN["center"][0], t.BIN["center"][1] - 0.05, t.TOP + 0.01))
 
 
 def obj(pos, moving=False):
     return SimpleNamespace(pos=np.asarray(pos, float), resting=lambda: not moving)
+
+
+def joints(pin=0.0, lever=0.0):
+    return SimpleNamespace(pos=np.array((pin, lever, 0.0)))
 
 
 def state(n, red_at=None, **kw):
@@ -23,8 +27,9 @@ def state(n, red_at=None, **kw):
     s = {**{k: obj(v) for k, v in PARKED.items()}}
     for i, name in enumerate(t.NAMES):
         s[name] = obj(BIN_AT + (0, 0.01 * i, 0)) if i < n else obj(t.world(M.part_y(i - n), 0.0005))
-    s = {**s, **kw}
+    s = {**s, "stop_joints": joints(), **kw}
     t.reset_latch()
+    t.note_step({**s, "stop_joints": joints(pin=-0.015)}, 0.05)  # the parts went by with the pin down
     t.note_step(s, 1.0)
     return s
 
@@ -44,6 +49,61 @@ def test_lots_put_red_second_to_fifth():
 
 def test_exact_release_scores_full(lot):
     assert t.score(state(t.AHEAD)) == 1.0
+
+
+def test_part_going_by_without_the_pin_down_scores_zero(lot):
+    s = state(t.AHEAD)
+    t.reset_latch()
+    t.note_step(s, 1.0)  # pin up as they went by
+    assert t._trial["bad"] and t.score(s) == 0.0
+
+
+def test_red_part_put_back_stays_out(lot):
+    s = state(t.AHEAD)
+    gone = {**s, t.RED_NAME: obj(BIN_AT)}
+    t.note_step({**gone, "stop_joints": joints(pin=-0.015)}, 0.05)
+    t.note_step(s, 1.0)
+    assert t.red_held(s) and t.score(s) == 0.0
+
+
+def test_reset_clears_the_latches(lot):
+    s = state(t.AHEAD)
+    t.reset_latch()
+    t.note_step(s, 1.0)
+    assert t._trial["bad"]
+    assert t.score(state(t.AHEAD)) == 1.0
+
+
+@pytest.mark.parametrize("pin,lever", [(-0.01, 0.0), (0.0, 5.0)])
+def test_a_stop_still_pressed_is_not_full_score(lot, pin, lever):
+    s = state(t.AHEAD, stop_joints=joints(pin, lever))
+    assert t.score(s) < 1.0
+
+
+def test_a_part_gripped_over_the_bin_is_not_full_score(lot):
+    s = state(t.AHEAD)
+    s["left_tcp"] = obj(s[t.NAMES[0]].pos)
+    assert t.score(s) < 1.0
+
+
+def test_part_at_the_chute_exit_is_not_in_the_bin():
+    assert not t.in_bin(obj(t.world(-0.006, 0.0)))
+
+
+def test_too_many_with_red_held_scores_zero(monkeypatch):
+    monkeypatch.setenv("ESCAPEMENT_LOT", "A")
+    importlib.reload(t)
+    s = state(1)
+    s[t.NAMES[2]] = obj(BIN_AT)
+    t._trial["red_out"] = False
+    assert t.released(s) == 2 and t.score(s) == 0.0
+    monkeypatch.delenv("ESCAPEMENT_LOT")
+    importlib.reload(t)
+
+
+def test_only_the_pin_fits_the_gap():
+    gap = M.PITCH - (M.BODY[1][1] - M.BODY[0][1])
+    assert M.UPPER_T < gap < M.LOWER_T
 
 
 def test_no_early_end_for_a_blind_one_at_a_time_plan():
@@ -119,7 +179,7 @@ def test_part_on_the_table_is_not_released(lot):
 def test_part_on_the_floor_is_not_released(lot):
     s = state(t.AHEAD)
     s[t.NAMES[0]] = obj((t.BIN["center"][0], t.BIN["center"][1], 0.02))
-    assert t.released(s) == t.AHEAD - 1 or t.in_bin(s[t.NAMES[0]])
+    assert t.released(s) == t.AHEAD - 1 and not t.in_bin(s[t.NAMES[0]])
 
 
 def test_red_past_the_stop_is_out(lot):
@@ -205,8 +265,13 @@ def test_chute_exit_clears_the_bin_wall():
     assert t.CHUTE_LOW[2] - M.WALL > t.TOP + t.BIN["height"]
 
 
-def test_parts_fit_the_bin_lying_flat():
-    assert t.BIN["inner"][0] * t.BIN["inner"][1] > 4 * 0.05 * 0.058
+def test_four_parts_fit_past_the_apron_in_a_line():
+    assert t.BIN["inner"][1] - t.BIN["apron_run"] + M.PITCH > 4 * M.PITCH
+
+
+def test_apron_starts_under_the_exit_and_below_it():
+    assert t.CHUTE_LOW[2] - M.WALL > t.TOP + t.BIN["apron_top"]
+    assert t.BIN["center"][1] + t.BIN["inner"][1] / 2 >= t.CHUTE_LOW[1] - 0.006
 
 
 # -- the demo ----------------------------------------------------------------------------------------------------------

@@ -44,18 +44,8 @@ def world(y, z=0.0, x=0.0):
     return M.to_world((x, y, z), CHUTE_LOW)
 
 
-BIN = dict(center=(0.24, -0.135), inner=(0.12, 0.14), wall=0.01, height=0.04, floor=0.004)
-
-
-def _bin():
-    (cx, cy), (ix, iy), w, h, f = BIN["center"], BIN["inner"], BIN["wall"], BIN["height"], BIN["floor"]
-    return [
-        Box("bin_floor", pos=(cx, cy, TOP + f / 2), size=(ix + 2 * w, iy + 2 * w, f), color=BLUE),
-        Box("bin_far", pos=(cx + ix / 2 + w / 2, cy, TOP + h / 2), size=(w, iy + 2 * w, h), color=BLUE),
-        Box("bin_near", pos=(cx - ix / 2 - w / 2, cy, TOP + h / 2), size=(w, iy + 2 * w, h), color=BLUE),
-        Box("bin_up", pos=(cx, cy + iy / 2 + w / 2, TOP + h / 2), size=(ix, w, h), color=BLUE),
-        Box("bin_down", pos=(cx, cy - iy / 2 - w / 2, TOP + h / 2), size=(ix, w, h), color=BLUE),
-    ]
+# y -6.5 to -36: an apron under the exit takes parts down to the far end, clear of the exit
+BIN = dict(center=(0.24, -0.2125), inner=(0.12, 0.295), wall=0.01, height=0.04, floor=0.004, apron_top=0.05, apron_run=0.09)
 
 
 def _legs():
@@ -71,7 +61,7 @@ OBJECTS = [
     Box("chute_frame", pos=tuple(CHUTE_LOW), size=(0.01, 0.01, 0.01), color=STEEL),
     Box("chute_stops", pos=tuple(CHUTE_LOW), size=(0.01, 0.01, 0.01), color=STEEL),
     *[Box(n, pos=tuple(float(v) for v in world(M.part_y(i), 0.0005)), size=(0.01, 0.01, 0.01), mass=M.PART_MASS) for i, n in enumerate(NAMES)],
-    *_bin(),
+    Box("catch_bin", pos=(BIN["center"][0], BIN["center"][1], TOP), size=(0.01, 0.01, 0.01), color=BLUE),
     *_legs(),
 ]
 
@@ -79,18 +69,41 @@ KNOB_U_WORLD = world(M.UPPER_Y, M.KNOB_U_TOP, M.KNOB_X)
 KNOB_L_WORLD = world(M.KNOB_L, M.KNOB_L_TOP, M.KNOB_X)
 
 # -- scoring -----------------------------------------------------------------------------------------------------------
-HANDS_CLEAR = 0.06  # each fingertip midpoint at least this far from both knobs
+HANDS_CLEAR = 0.06  # each fingertip midpoint at least this far from both knobs and every part
 ONE_SHORT = 0.15
-OVER_BIN = 0.05  # a part in the bin is at most this far above its rim
+BIN_TOP = 0.055  # a part in the bin has its underside between the table and this far above it
+REST_Y = M.STOP_FACE + 0.025  # a first part's y against the lower stop
+PASSED = 0.01  # a part this far past that has gone by the lower stop
+PIN_DOWN = -0.010  # the pin at least this far down is in the gap, holding the queue
+HOME_PIN, HOME_LEVER = -0.002, 1.0  # m, degrees: a stop within this of home has been let go
+STILL_S = 1.0  # every part at rest this long
+_trial = {"still": 0.0, "passed": set(), "bad": False, "red_out": False}
+
+
+def reset_latch():
+    """Forget the trial: the embodiment calls this at every reset. Nothing a robot does clears these."""
+    _trial.update(still=0.0, passed=set(), bad=False, red_out=False)
 
 
 def chute_y(o):
     return M.to_local(o.pos, CHUTE_LOW)[1]
 
 
+def note_step(objects, dt):
+    """Called by the embodiment after every control step: the stillness clock, and for each part the moment it goes by the
+    lower stop. If the pin isn't down then, the stops weren't used; if the part is the red one, it's out for good."""
+    _trial["still"] = _trial["still"] + dt if all(objects[n].resting() for n in NAMES) else 0.0
+    pin = float(objects["stop_joints"].pos[0])
+    for n in NAMES:
+        if n not in _trial["passed"] and chute_y(objects[n]) < REST_Y - PASSED:
+            _trial["passed"].add(n)
+            _trial["bad"] |= pin > PIN_DOWN
+            _trial["red_out"] |= n == RED_NAME
+
+
 def in_bin(o):
     (cx, cy), (ix, iy) = BIN["center"], BIN["inner"]
-    return bool(abs(o.pos[0] - cx) <= ix / 2 and abs(o.pos[1] - cy) <= iy / 2 and o.pos[2] <= TOP + BIN["height"] + OVER_BIN)
+    return bool(abs(o.pos[0] - cx) <= ix / 2 and abs(o.pos[1] - cy) <= iy / 2 and TOP <= o.pos[2] <= TOP + BIN_TOP)
 
 
 def released(objects):
@@ -99,42 +112,33 @@ def released(objects):
 
 
 def red_held(objects):
-    """The red part still in the chute, its block behind the lower stop's face (2 mm of play) and within the chute's width."""
+    """The red part still in the chute, uphill of the lower stop's face (2 mm of play) and within the chute's width."""
     x, y, z = M.to_local(objects[RED_NAME].pos, CHUTE_LOW)
-    return bool(abs(x) <= M.INNER_HALF and M.STOP_FACE + 0.025 - 0.002 <= y <= M.LENGTH and -0.002 <= z <= M.COVER_Z)
+    return bool(abs(x) <= M.INNER_HALF and REST_Y - 0.002 <= y <= M.LENGTH and -0.002 <= z <= M.COVER_Z)
+
+
+def stops_home(objects):
+    pin, lever = objects["stop_joints"].pos[:2]
+    return bool(pin >= HOME_PIN and lever <= HOME_LEVER)
 
 
 def hands_clear(objects):
-    return all(np.linalg.norm(objects[a].pos - k) >= HANDS_CLEAR for a in ("left_tcp", "right_tcp")
-               for k in (KNOB_U_WORLD, KNOB_L_WORLD))
-
-
-STILL_S = 1.0  # every part at rest this long
-_trial = {"still": 0.0}
-
-
-def reset_latch():
-    """Forget the trial: the embodiment calls this at every reset."""
-    _trial.update(still=0.0)
-
-
-def note_step(objects, dt):
-    """Called by the embodiment after every control step: the stillness clock."""
-    _trial["still"] = _trial["still"] + dt if all(objects[n].resting() for n in NAMES) else 0.0
+    points = (KNOB_U_WORLD, KNOB_L_WORLD, *(objects[n].pos for n in NAMES))
+    return all(np.linalg.norm(objects[a].pos - p) >= HANDS_CLEAR for a in ("left_tcp", "right_tcp") for p in points)
 
 
 def score(objects):
     """Read at the end of the run; there's no early end, or a plan could release one part at a time blind and be stopped
-    at the right count. 1.0: every part ahead of the red one in the bin, the red one in the chute, every part at rest for
-    1 s, both hands clear. 0.15: the red one in the chute, with at least one part in the bin and either one part still
-    to come or those last conditions missing. Otherwise 0, including the red part out of the chute. Parts anywhere else
-    count for nothing."""
-    if not red_held(objects):
+    at the right count. 0 if any part went by the lower stop without the pin down, if the red part ever went by it, or if
+    it isn't held now. 1.0: exactly the parts ahead of it in the bin, every part at rest for 1 s, both stops home, both
+    hands clear. 0.15: at least one part in the bin and either one part still to come or those last conditions missing.
+    Otherwise 0. Parts anywhere else count for nothing."""
+    if _trial["bad"] or _trial["red_out"] or not red_held(objects):
         return 0.0
     n = released(objects)
-    if n == AHEAD and _trial["still"] >= STILL_S and hands_clear(objects):
+    if n == AHEAD and _trial["still"] >= STILL_S and stops_home(objects) and hands_clear(objects):
         return 1.0
-    return ONE_SHORT if n >= 1 and n >= AHEAD - 1 else 0.0
+    return ONE_SHORT if n >= 1 and AHEAD - 1 <= n <= AHEAD else 0.0
 
 
 # -- scripted demo -----------------------------------------------------------------------------------------------------

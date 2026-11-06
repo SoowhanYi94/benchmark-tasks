@@ -1,6 +1,7 @@
 """`yam_escapement`: the stock yam_arena embodiment plus the chute, stops and parts (two_stop_escapement.mech), the
 harness unchanged. The task file lists placeholder boxes that are spawned as those bodies, tilted as the chute is. The
-scorer also gets `left_tcp` and `right_tcp` (the point midway between each gripper's fingertips) each step. A part's
+scorer also gets `left_tcp` and `right_tcp` (the point midway between each gripper's fingertips) and `stop_joints` (pos:
+the pin's travel in m, the lever's angle in degrees) each step. A part's
 state is its own frame (mech.PART), not a bounding box."""
 
 import os
@@ -9,10 +10,11 @@ import numpy as np
 from yam_arena.inspect_embodiment import YamArenaEmbodiment
 
 DEBUG = os.environ.get("ESCAPEMENT_DEBUG") == "1"
-FRAME, STOPS = "chute_frame", "chute_stops"
+FRAME, STOPS, BIN = "chute_frame", "chute_stops", "catch_bin"
 PARTS = tuple(f"part_{i + 1}" for i in range(6))
-OWN = (FRAME, STOPS, *PARTS)
+OWN = (FRAME, STOPS, BIN, *PARTS)
 _RED = {}  # prim name -> shows red, filled by make_object
+_BIN = {}  # the bin's build arguments, from the task file
 
 
 def _place(stage, prim_path, translation, orientation):
@@ -47,6 +49,16 @@ def spawn_stops(prim_path, cfg, translation=None, orientation=None, **kwargs):
     return mech.build_mech(stage, prim_path, tuple(m.ExtractTranslation()), m.ExtractRotationQuat())
 
 
+def spawn_bin(prim_path, cfg, translation=None, orientation=None, **kwargs):
+    import omni.usd
+
+    from . import mech
+
+    stage = omni.usd.get_context().get_stage()
+    _place(stage, prim_path, translation, (0.0, 0.0, 0.0, 1.0))
+    return mech.build_bin(stage, prim_path, **_BIN)
+
+
 def spawn_part(prim_path, cfg, translation=None, orientation=None, **kwargs):
     import omni.usd
 
@@ -79,6 +91,7 @@ class EscapementEmbodiment(YamArenaEmbodiment):
 
         original = scene.task_object
         _RED.update({n: n == self.task.module.RED_NAME for n in PARTS})
+        _BIN.update({k: v for k, v in self.task.module.BIN.items() if k != "center"})
 
         def make_object(spec):
             import isaaclab.sim as sim_utils
@@ -89,10 +102,10 @@ class EscapementEmbodiment(YamArenaEmbodiment):
             if spec.name not in OWN:
                 return original(spec)
             cfg = sim_utils.CuboidCfg(size=(0.01, 0.01, 0.01))
-            cfg.func = {FRAME: spawn_frame, STOPS: spawn_stops}.get(spec.name, spawn_part)
-            kind = {FRAME: ObjectType.BASE, STOPS: ObjectType.ARTICULATION}.get(spec.name, ObjectType.RIGID)
+            cfg.func = {FRAME: spawn_frame, STOPS: spawn_stops, BIN: spawn_bin}.get(spec.name, spawn_part)
+            kind = {FRAME: ObjectType.BASE, BIN: ObjectType.BASE, STOPS: ObjectType.ARTICULATION}.get(spec.name, ObjectType.RIGID)
             return Object(name=spec.name, object_type=kind, spawner_cfg=cfg,
-                          initial_pose=Pose(position_xyz=tuple(spec.pos), rotation_xyzw=mech.tilt_xyzw()))
+                          initial_pose=Pose(position_xyz=tuple(spec.pos), rotation_xyzw=(0.0, 0.0, 0.0, 1.0) if spec.name == BIN else mech.tilt_xyzw()))
 
         scene.task_object = make_object
         try:
@@ -114,6 +127,10 @@ class EscapementEmbodiment(YamArenaEmbodiment):
             arm_ids, _ = self._ids[robot]
             p = np.asarray(ik.tcp_pose(arr(base.scene[robot].data.joint_pos.torch[0, arm_ids]), np.array(BASES[arm]))[0], float)
             out[f"{arm}_tcp"] = ObjectState(pos=p, quat_xyzw=still, lin_vel=zero, ang_vel=zero, low=p, high=p)
+        art = base.scene[STOPS]
+        q = arr(art.data.joint_pos.torch[0])
+        j = np.array((q[art.joint_names.index("pin_slide")], np.degrees(q[art.joint_names.index("lever_turn")]), 0.0))
+        out["stop_joints"] = ObjectState(pos=j, quat_xyzw=still, lin_vel=zero, ang_vel=zero, low=j, high=j)
         world = base.arena_world
         for name in PARTS:
             pose = arr(world.get_pose_w(name)[0])

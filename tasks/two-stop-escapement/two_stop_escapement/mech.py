@@ -27,7 +27,7 @@ PART_MASS = 0.15  # about 2.4 g/cm3
 
 STOP_FACE = 0.085  # the lower stop's uphill face: the first block rests against it
 TIP_Z = 0.012  # both stops reach down to here when closed: the blocks hit them, the noses (10 mm) pass under
-LOWER_T, UPPER_T, STOP_W = 0.006, 0.005, 0.016  # thickness along y, width across
+LOWER_T, UPPER_T, STOP_W = 0.010, 0.005, 0.016  # thickness along y, width across: only the pin fits the 8 mm gap
 
 # The lever's pivot is outside the chute, level with the blocks, so the stop's tip lifts almost straight up and doesn't
 # push the first block back into the held queue as it opens.
@@ -51,7 +51,7 @@ MASS = {"anchor": 1.0, "lever": 0.08, "pin": 0.04}
 ITERS, VEL_ITERS, MAX_DEPEN = 16, 4, 1.0
 
 COLORS = {"chute": (0.14, 0.15, 0.17), "part": (0.75, 0.77, 0.80), "red_part": (0.90, 0.08, 0.06),
-          "lever": (0.95, 0.55, 0.05), "pin": (0.10, 0.45, 0.85), "steel": (0.30, 0.32, 0.35)}
+          "lever": (0.95, 0.55, 0.05), "pin": (0.10, 0.45, 0.85), "steel": (0.30, 0.32, 0.35), "bin": (0.12, 0.28, 0.65)}
 
 
 def part_y(i):
@@ -219,6 +219,30 @@ def build_mech(stage, path, world_origin, world_rot):
     d.CreateTargetPositionAttr(SPRING_PRELOAD)
     d.CreateStiffnessAttr(SPRING_N_PER_M)
     d.CreateDampingAttr(SPRING_N_PER_M / 20)
+    return prim
+
+
+def build_bin(stage, path, inner, wall, height, floor, apron_top, apron_run):
+    """The catch bin as one kinematic body at ``path``, its origin on the table at the bin's centre (inner: x, y). A low
+    friction floor and a sloping apron from under the chute's exit take parts away from the exit, so they can't pile up
+    under it and block the next one. The apron's top edge is at the bin's +y wall, ``apron_top`` above the table."""
+    Gf, _, UsdGeom, _, _ = _api()
+    b = _Builder(stage, path)
+    prim = stage.GetPrimAtPath(path) if stage.GetPrimAtPath(path) else UsdGeom.Xform.Define(stage, path).GetPrim()
+    b.rigid(prim, kinematic=True)
+    ix, iy = inner
+    b.cube(f"{path}/floor", ((-ix / 2 - wall, -iy / 2 - wall, 0.0), (ix / 2 + wall, iy / 2 + wall, floor)), "bin")
+    for name, lo, hi in (("far", (ix / 2, -iy / 2 - wall), (ix / 2 + wall, iy / 2 + wall)),
+                         ("near", (-ix / 2 - wall, -iy / 2 - wall), (-ix / 2, iy / 2 + wall)),
+                         ("up", (-ix / 2, iy / 2), (ix / 2, iy / 2 + wall)),
+                         ("down", (-ix / 2, -iy / 2 - wall), (ix / 2, -iy / 2))):
+        b.cube(f"{path}/{name}", ((lo[0], lo[1], 0.0), (hi[0], hi[1], height)), "bin")
+    drop = apron_top - floor
+    length, angle, t = math.hypot(apron_run, drop), math.degrees(math.atan2(drop, apron_run)), 0.005
+    xf = UsdGeom.Xform.Define(stage, f"{path}/apron")
+    xf.AddTranslateOp().Set(Gf.Vec3d(0.0, iy / 2 - apron_run / 2, floor + drop / 2))
+    xf.AddRotateXOp().Set(float(angle))
+    b.cube(f"{path}/apron/plate", ((-ix / 2, -length / 2, -t), (ix / 2, length / 2, 0.0)), "bin")
     return prim
 
 
