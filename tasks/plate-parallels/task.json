@@ -1,0 +1,19 @@
+{
+  "title": "Set parallels clear of a plate's through-holes",
+  "category": "Impact on jobs",
+  "keywords": [
+    "machining",
+    "setup",
+    "workholding",
+    "reading a part"
+  ],
+  "instruction": "Stand the two parallels on the mat at least 10 cm apart and clear of the plate's holes, rest the plate on them, drop a pin fully through each hole, and move both hands away.",
+  "context": "Machinists set work up on parallels and have to keep them out from under through-holes, or a drill or tap runs into hardened steel. Where the parallels can go depends on where each part's holes are.",
+  "setup": "Station table. A black rubber mat 16 x 42 cm, 5 mm thick, lies with its centre at (27, 0) cm. An aluminium plate 30 x 8 x 1 cm, 450 g, with two 4 cm square through-holes and a 3 x 2.5 cm grip 4 cm tall at its middle, lies along y on two steel stand bars at (15, -10) and (15, +10) cm, 8 x 2 x 3 cm. The holes' centres are set by the lot, from the plate's centre along its length, with +y as it lies: A at -12 and +12 cm, B at -12 and +6, C at -6 and +12, D at -6 and +6. Two hollow blue steel parallels 8 x 5 x 5 cm, 300 g, stand on the table at (15, +20) and (15, -20) cm. Two orange hollow pins, 80 g each, hang by their collars across steel rail pairs at (15, +28) and (15, -28) cm, each rail 6 x 1.2 x 4.5 cm with the pair 4 cm apart: each pin has a 1.6 cm square shank 4 cm long under a 5 cm square, 1 cm thick collar, and a 2.4 cm square grip 3 cm tall on top. Positions are from the arm bases' midpoint in x and the table's centre line in y, with +y toward the left arm. The screenshot shows lot A.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint. 0 unless, for the last 1 s, everything has been at rest (under 1 cm/s and 0.5 rad/s) with both hands 8 cm or more from the plate and from each pin's collar, and the plate is flat within 2 degrees with its centre on the mat, resting on both parallels. Each parallel must be upright within 5 degrees, its 5 cm side along the plate within 10 degrees, with its centre on the mat and its underside on it within 3 mm, wholly under the plate along its length, within 2 cm of its centre line across it, its top within 4 mm of the plate's underside, and its 5 cm footprint wholly clear of every hole along the plate. The two must be at least 10 cm apart, centre to centre. Then 1.0 with both pins through the holes (shank within the hole's edges, collar within 4 mm of the plate's top, upright within 5 degrees), 0.2 with one. A pin stopped by a parallel stands 3 cm proud and doesn't count. Trials are run on each of lots A to D and averaged.",
+  "run_limit": "3,000 steps (2.5 minutes at 20 Hz)",
+  "reset_notes": "Set the parts back on the stand and rails. Nothing is consumed. Lots use a different plate.",
+  "fidelity": "A rigid-body simulation with square holes and pins instead of round ones, for stable contact. No machining is simulated: a pin through a hole stands in for a drill's clearance. The plate's holes are visible from the top camera, though small at 320x176.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-DFEYC4"
+}
