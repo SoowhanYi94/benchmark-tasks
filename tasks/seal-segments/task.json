@@ -1,0 +1,21 @@
+{
+  "title": "Run seal segments round a turbine ring groove, passing them between arms",
+  "category": "Impact on jobs",
+  "keywords": [
+    "turbine",
+    "curved part",
+    "arc path",
+    "relay",
+    "bimanual",
+    "maintenance"
+  ],
+  "instruction": "Run all four seal segments in through the gate and clockwise round the ring's groove until all four lie under the cover, lifting a segment over the floor step at the yellow mark where it has to cross it, then lay the orange bar in the gate and move both hands away.",
+  "context": "Turbine fitters feed seal and blade segments through a casing's entry gate and run them round a covered groove, the part turning with the arc all the way. The ring is bigger than one reach, so the work passes from one side to the other.",
+  "setup": "A turbine casing ring bolted to the table, its centre at (27, 0) cm, on a dark steel plate 26.6 cm square and 8 mm thick. Angles are from +x about that centre, and increase anticlockwise from above. Its groove has a mean radius of 10 cm, 36 mm wide (radii 8.2 to 11.8 cm) and 32 mm tall above the plate, between aluminium walls running out to radii 7.2 and 12.8 cm, under a 6 mm cover with a 22 mm slot along the mean radius; the cover's top is 46 mm above the table. The gate is where the cover is cut away, from about 105 to 185 degrees; there the walls stand back to radii 7.8 and 12.2 cm. A red steel stop 5.5 degrees long fills the groove up to the gate's 184 degree edge. A steel step 6 mm tall and 4 degrees long crosses the groove's floor from -38 to -34 degrees, hidden under the cover and shown by yellow marks on the cover either side of the slot, 20 degrees long. Four identical aluminium seal segments, 170 g each: a 66 degree arc with radii 8.8 to 11.2 cm and 14 mm tall, a 12 mm square stem up to 46 mm above its underside and a blue 3 cm square knob up to 68 mm. They stand on the table with their knobs at (28, 29), (14, 29), (28, 20) and (14, 20) cm, their ends curving toward -y. An aluminium gate bar, 205 g, orange: a 68 degree plate with radii 7 to 13 cm, 6 mm thick, two dogs under it at 25 degrees either side of its middle, each 28 mm across the radius, about 7 mm along the arc and 26 mm tall, and a 12 mm square stem carrying a 3 cm square knob from 16 to 40 mm above the plate's underside. It stands on its dogs at (20, -27) cm, its ends curving toward -y. Positions are from the arm bases' midpoint in x and the table's centre line in y, with +y toward the left arm. The screenshot shows the start.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint, and a part counts as let go only with both hands 6 cm or more from its box, in its own frame. 0 for good if a part leaves the table. The segments are identical, and any may lie anywhere. A segment is judged in the ring's frame: seated with its knob's centre within 7 mm of the mean radius, its underside within 4 mm of the groove's floor, flat within 5 degrees, its own radial line within 8 degrees of the radius through it, and wholly under the cover, with its knob between -144.5 and 72.5 degrees. 0.2 for each segment seated and let go, at least 58 degrees from the last one counted. 0.9 with all four and the bar seated and let go: its knob within 6 degrees of 144 degrees and 9 mm of the mean radius, its underside within 4 mm of the cover's top, flat within 5 degrees, its own radial line within 6 degrees of the radius through it. 1.0 with all parts also at rest (under 1 cm/s and 0.5 rad/s) and both hands clear of them for the last 1 s. The bar earns nothing without all four segments. Anything else scores what its segments earn, or 0 with none.",
+  "run_limit": "3,000 steps (2.5 minutes at 20 Hz)",
+  "reset_notes": "Stand the segments and the bar back at their places on the table. Nothing is consumed.",
+  "fidelity": "A rigid-body simulation. The ring is fixed and built of 5 degree box facets. Segments have 5 to 6 mm of play and slide at a friction of 0.15, standing in for a lubricated groove. Real seal segments have far less play, carry sealing strips and are often tapped along; none of that is modelled. Nothing is fastened: the bar is only laid in place. The step stands in for a casing's split-line step or a similar obstruction.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-KLHX2A"
+}

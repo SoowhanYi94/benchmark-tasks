@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robocurve-seal-segments"
+version = "0.0.1"
+
+[project.entry-points."inspect_robots.embodiments"]
+yam_seal = "seal_segments.embodiment:make_embodiment"
+
+[tool.setuptools.packages.find]
+include = ["seal_segments*"]
