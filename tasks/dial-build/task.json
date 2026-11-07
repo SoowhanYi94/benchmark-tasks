@@ -1,0 +1,20 @@
+{
+  "title": "Build two parts on a turning assembly dial, then stop it",
+  "category": "Impact on jobs",
+  "keywords": [
+    "assembly",
+    "moving target",
+    "rotary table",
+    "line work",
+    "bimanual"
+  ],
+  "instruction": "Fit a block in each blue pocket on the turning dial and a peg in each block, press the red pad to stop the dial, and move both hands away.",
+  "context": "Assembly operators load and fit parts on tables and dials that keep moving, so a part has to be matched to its pocket while it travels. Stopping a line to make placing easier costs output.",
+  "setup": "An assembly station on the table. A grey aluminium dial 30 cm across, its top 2 cm above the table, turns steadily anticlockwise from above at 6 degrees per second about an axle at (27, 0) cm, on a dark steel base 18 cm square. Two blue pockets lie on it, 10 cm from the axle and opposite each other, each with a 7.6 cm square opening and walls 8 mm thick and 1 cm tall; at the start they lie at 30 and 210 degrees from +x, and a pocket's sides lie along x and y when it reaches 90 degrees. Two aluminium blocks 6 x 6 x 3 cm, 220 g, each with a 3 cm square bore, stand on the table at (13, 26) and (21, 27) cm. Two orange aluminium pegs, 130 g, each a 1.6 cm square shaft 2.5 cm long under a 4 cm square head 2.5 cm tall, hang by their heads across pairs of steel rails at (13, -26) and (21, -27) cm, each rail 5 x 1 cm and 3 cm tall, with centres 3 cm apart. A sprung red steel stop pad 6 x 6 cm on a steel post 2.4 cm square, its top 6 cm above the table, stands at (31, 21.5) cm, with 3 cm of travel at 1.6 to 4 N. Once it has gone down 1 cm, the dial stops for good. Positions are from the arm bases' midpoint in x and the table's centre line in y, with +y toward the left arm. The screenshot shows the start.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint, and a part counts as let go only with both hands 6 cm or more from its box. 0 for good if the pad goes down 1 cm before both blocks and pegs are in place and let go, if the dial runs slower than 3 degrees/s for 1 s before that, or if a part leaves the table. The blocks are identical, and so are the pegs: either may go in either place, and a peg may go in its block before or after the block is placed. Otherwise 0.2 for each pocket holding a block let go: within 11 mm of its pocket's centre in both directions across it, within 4 mm of the disc's top, and flat within 5 degrees. A further 0.3 for each such block with a peg let go in it: within 9 mm of the block's centre along each of the block's sides, its head within 4 mm of the block's top, flat within 5 degrees. 0.9 with both built and let go. 1.0 with the dial also stopped by the pad, both hands 8 cm or more from the middle of the pad's top and 6 cm from every part, and all parts at rest (under 1 cm/s and 0.5 rad/s) for the last 1 s.",
+  "run_limit": "3,000 steps (2.5 minutes at 20 Hz)",
+  "reset_notes": "Set the dial back so the pockets lie at 30 and 210 degrees, and the parts back on the table and rails. Nothing is consumed.",
+  "fidelity": "A rigid-body simulation. The dial is a velocity-driven joint with a stiff damping drive; a part set down jolts it for a moment. Pressing the pad stops it through a joint limit, with no brake modelled. Parts are square with generous clearance (8 mm a side for the block, 7 mm for the peg), and nothing is fastened: a peg is only dropped into place. The real rate would be a line's own.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-G367KT"
+}
