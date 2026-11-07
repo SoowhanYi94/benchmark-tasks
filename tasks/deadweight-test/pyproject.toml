@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robocurve-deadweight-test"
+version = "0.0.1"
+
+[project.entry-points."inspect_robots.embodiments"]
+yam_deadweight = "deadweight_test.embodiment:make_embodiment"
+
+[tool.setuptools.packages.find]
+include = ["deadweight_test*"]
