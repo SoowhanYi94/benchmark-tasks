@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robocurve-cart-reverse"
+version = "0.0.1"
+
+[project.entry-points."inspect_robots.embodiments"]
+yam_cart = "cart_reverse.embodiment:make_embodiment"
+
+[tool.setuptools.packages.find]
+include = ["cart_reverse*"]
