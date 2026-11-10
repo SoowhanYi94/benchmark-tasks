@@ -1,0 +1,20 @@
+{
+  "title": "Break a seized pulley loose with two pry bars and take it off",
+  "category": "Impact on jobs",
+  "keywords": [
+    "maintenance",
+    "pry bar",
+    "leverage",
+    "seized fit",
+    "bimanual"
+  ],
+  "instruction": "Use the pry bars to break the pulley loose on the motor shaft without touching it by hand, then take it off the shaft and stand it in the V-block.",
+  "context": "Maintenance fitters taking a seized V-belt pulley off a motor shaft, where there is no room behind it for a puller, lever it off with two bars set either side of the shaft against the motor's bearing housing. A seized fit is far too tight to pull off by hand, and the bars' leverage is what moves it.",
+  "setup": "A gearmotor on a green steel base plate (25 x 20 x 1 cm, x 8 to 33 cm, centred on y 0), its 19 mm steel output shaft along +x at y 0, 7.5 cm above the table (square-section to the physics, so the pulley can't turn on it; see fidelity). The blue cast bearing housing ends in a flat face at x 25 cm, 13 cm wide, its two front vertical corners bevelled 6 mm at 45 degrees, with a 5.6 cm bearing cap standing 12 mm proud of the face around the shaft. The shaft runs to x 31.9 cm, flush with the pulley hub's front face. On it sits a cast-iron two-groove V-belt pulley, 0.8 kg: 9 cm outside diameter, rim 2.6 cm wide, a 1 cm web, a 4 cm hub 5 cm long reaching forward; its back face is 19 mm from the housing face. Its bore fits the shaft with 0.3 mm a side over its back 2.5 cm and is relieved in front. Two grey steel slide rails (11 x 2.5 cm, top 6.9 cm above the table) run along x from 17 to 28 cm, at y 6 to 8.5 cm each side. Two forged steel pry bars, 24.2 cm long, 10 x 12 mm, 0.24 kg, each with its tip end bent 4 mm and a 7.2 cm rubber sleeve on the handle (red on the left bar, yellow on the right), lie along y on two wooden rests each (5 x 3 x 4 cm, at x 15 cm, y +-11 and +-25 cm), tip ends at y +-7.5 cm. A hardwood V-block (7 x 11 cm base, two cheeks at 45 degrees, the V along x) stands at (30, -19) cm. Positions are from the arm bases' midpoint in x and the table's centre line in y, with +y toward the left arm. The screenshot shows the start.",
+  "scoring": "Read at the end of the run. A hand is a gripper's fingertip midpoint. 0 for good if a hand comes within 5 cm of the pulley (a box over its rim and hub) before it has come 8 mm along the shaft, or if the pulley or a bar leaves the table. Otherwise by how far the pulley's back face has come along the shaft from its start: 0.25 at 3 mm, 0.5 at 6 mm, 0.75 at 8 mm (loose), and 0.75 anywhere once loose, on the shaft or off it. 1.0 with the pulley standing in the V-block (the middle of its rim within 2.5 cm of the V-block's centre along x, 1.2 cm across and 8 mm in height of where the V holds it, its axis within 10 degrees of x, either way round), both hands 6 cm or more from it, and the pulley and both bars at rest (under 1 cm/s and 0.5 rad/s) for the last 1 s.",
+  "run_limit": "3,000 steps (2.5 minutes at 20 Hz)",
+  "reset_notes": "Push the pulley back on until its back face is 19 mm from the housing face (the seized fit is reset with it), and lay the bars back on their rests. Nothing is consumed.",
+  "fidelity": "Rigid bodies with real contact. The seized fit is a coded axial drag of 60 N on the pulley, switched off once it has come 8 mm; everything else about the fit is real contact: a square 19 mm shaft in a square bore with 0.3 mm a side over 2.5 cm, friction 0.5, so a one-sided push cocks the pulley about 1.4 degrees and it jams. The bars lever on the housing's bevel edge by contact. The shaft and bore are square for the collider (round to look at).",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-L2A374"
+}
