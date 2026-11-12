@@ -1,0 +1,315 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="30" y="36" font-size="18" text-anchor="start" font-weight="bold" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">(a) Plan view, looking down</text>
+<text x="30" y="58" font-size="13" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">x up the page, from the arm bases' midpoint (x = 0 is below the page); y to the left, from the table's centre line (+y toward the left arm)</text>
+<text x="30" y="76" font-size="13" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">Cradle level (start pose); parts drawn see-through; all dimensions in mm; dashed outlines show the end of each slide</text>
+<line x1="580" y1="130" x2="580" y2="582" stroke="#777" stroke-width="0.8" stroke-dasharray="10 3 2 3"/>
+<text x="586" y="126" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">y = 0</text>
+<line x1="167" y1="360" x2="1054" y2="360" stroke="#777" stroke-width="0.8" stroke-dasharray="10 3 2 3"/>
+<text x="991" y="355" font-size="11" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">axle x 290</text>
+<rect x="280" y="150" width="705" height="420" fill="#8c9096" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="904" y="270" width="36" height="180" fill="#b0b4ba" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="328" y="270" width="36" height="180" fill="#b0b4ba" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="328" y="270" width="36" height="180" fill="#b0b4ba" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="406" y="198" width="468" height="24" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="457" y="222" width="246" height="48" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="222" width="18" height="276" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="222" width="18" height="72" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="222" width="18" height="276" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="222" width="18" height="72" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="406" y="498" width="468" height="24" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="457" y="450" width="246" height="48" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="222" width="18" height="276" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="426" width="18" height="72" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="222" width="18" height="276" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="426" width="18" height="72" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="376" y="240" width="30" height="240" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="376" y="240" width="30" height="96" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="376" y="384" width="30" height="96" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="364" y="336" width="12" height="48" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="874" y="198" width="24" height="324" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="898" y="336" width="6" height="48" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="946" y="336" width="18" height="168" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="964" y="468" width="18" height="24" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="982" y="435" width="72" height="90" fill="#f2bf1a" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="760" y="223.5" width="90" height="273" fill="#1a66d9" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="850" y="300" width="24" height="120" fill="#1a66d9" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="535" y="223.5" width="90" height="273" fill="none" fill-opacity="0" stroke="#1a66d9" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="625" y="300" width="24" height="120" fill="none" fill-opacity="0" stroke="#1a66d9" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="190" y="342" width="168" height="36" fill="#d91f14" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="190" y="300" width="24" height="120" fill="#d91f14" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="235" y="342" width="168" height="36" fill="none" fill-opacity="0" stroke="#d91f14" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="235" y="300" width="24" height="120" fill="none" fill-opacity="0" stroke="#d91f14" stroke-width="1.6" stroke-dasharray="6 4"/>
+<text x="292" y="546" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">base</text>
+<text x="953" y="416" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 953 416)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near pillar</text>
+<text x="341" y="416" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 341 416)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far pillar</text>
+<text x="670" y="514" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">cradle rail</text>
+<text x="670" y="214" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">cradle rail</text>
+<text x="449" y="226" font-size="11" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">ledge</text>
+<text x="449" y="502" font-size="11" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">ledge</text>
+<text x="805" y="364" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">(parked)</text>
+<text x="805" y="319" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">retaining bar</text>
+<text x="580" y="276" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bar closed</text>
+<text x="280" y="364" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">lock bolt</text>
+<text x="1018" y="408" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">knob</text>
+<text x="890" y="360" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 890 360)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near end plate 108 x 8</text>
+<text x="395" y="430" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 395 430)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far end plate 80 x 10</text>
+<text x="30" y="650" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">End beams 92 x 6 x 5 at y &#177;41 to &#177;47;</text>
+<text x="30" y="667" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">corner stubs 24 x 6 x 8, 82 apart.</text>
+<text x="955" y="360" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 955 360)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">crank</text>
+<line x1="280" y1="150" x2="280" y2="108" stroke="#555" stroke-width="0.8"/>
+<line x1="985" y1="150" x2="985" y2="108" stroke="#555" stroke-width="0.8"/>
+<polygon points="280,112 287,109.5 287,114.5" fill="#222"/>
+<polygon points="985,112 978,114.5 978,109.5" fill="#222"/>
+<line x1="280" y1="112" x2="985" y2="112" stroke="#222" stroke-width="1"/>
+<text x="632.5" y="107" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">base 235 long in y (-135 to 100)</text>
+<line x1="328" y1="150" x2="328" y2="130" stroke="#555" stroke-width="0.8"/>
+<line x1="364" y1="150" x2="364" y2="130" stroke="#555" stroke-width="0.8"/>
+<polygon points="328,134 335,131.5 335,136.5" fill="#222"/>
+<polygon points="364,134 357,136.5 357,131.5" fill="#222"/>
+<line x1="328" y1="134" x2="364" y2="134" stroke="#222" stroke-width="1"/>
+<text x="312" y="138" font-size="13" text-anchor="end" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far pillar 12 thick (y 72 to 84)</text>
+<line x1="904" y1="150" x2="904" y2="130" stroke="#555" stroke-width="0.8"/>
+<line x1="940" y1="150" x2="940" y2="130" stroke="#555" stroke-width="0.8"/>
+<polygon points="904,134 911,131.5 911,136.5" fill="#222"/>
+<polygon points="940,134 933,136.5 933,131.5" fill="#222"/>
+<line x1="904" y1="134" x2="940" y2="134" stroke="#222" stroke-width="1"/>
+<text x="956" y="138" font-size="13" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near pillar 12 thick (y -120 to -108)</text>
+<line x1="403" y1="378" x2="403" y2="604" stroke="#555" stroke-width="0.8"/>
+<line x1="358" y1="378" x2="358" y2="604" stroke="#555" stroke-width="0.8"/>
+<polygon points="358,600 365,597.5 365,602.5" fill="#222"/>
+<polygon points="403,600 396,602.5 396,597.5" fill="#222"/>
+<line x1="358" y1="600" x2="403" y2="600" stroke="#222" stroke-width="1"/>
+<text x="342" y="604" font-size="13" text-anchor="end" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bolt travel 15</text>
+<line x1="406" y1="522" x2="406" y2="604" stroke="#555" stroke-width="0.8"/>
+<line x1="874" y1="522" x2="874" y2="604" stroke="#555" stroke-width="0.8"/>
+<polygon points="406,600 413,597.5 413,602.5" fill="#222"/>
+<polygon points="874,600 867,602.5 867,597.5" fill="#222"/>
+<line x1="406" y1="600" x2="874" y2="600" stroke="#222" stroke-width="1"/>
+<text x="640" y="595" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">rail length 156 (y -98 to 58)</text>
+<line x1="805" y1="480" x2="805" y2="636" stroke="#555" stroke-width="0.8"/>
+<line x1="580" y1="480" x2="580" y2="636" stroke="#555" stroke-width="0.8"/>
+<polygon points="580,632 587,629.5 587,634.5" fill="#222"/>
+<polygon points="805,632 798,634.5 798,629.5" fill="#222"/>
+<line x1="580" y1="632" x2="805" y2="632" stroke="#222" stroke-width="1"/>
+<text x="692.5" y="627" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bar travel 75 (centre y -75 to 0)</text>
+<line x1="1018" y1="525" x2="1018" y2="668" stroke="#555" stroke-width="0.8"/>
+<line x1="580" y1="525" x2="580" y2="668" stroke="#555" stroke-width="0.8"/>
+<polygon points="580,664 587,661.5 587,666.5" fill="#222"/>
+<polygon points="1018,664 1011,666.5 1011,661.5" fill="#222"/>
+<line x1="580" y1="664" x2="1018" y2="664" stroke="#222" stroke-width="1"/>
+<text x="799" y="659" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">knob centre at y -146</text>
+<line x1="328" y1="270" x2="151" y2="270" stroke="#555" stroke-width="0.8"/>
+<line x1="328" y1="450" x2="151" y2="450" stroke="#555" stroke-width="0.8"/>
+<polygon points="155,270 157.5,277 152.5,277" fill="#222"/>
+<polygon points="155,450 152.5,443 157.5,443" fill="#222"/>
+<line x1="155" y1="270" x2="155" y2="450" stroke="#222" stroke-width="1"/>
+<text x="150" y="360" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 150 360)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">pillars 60 wide (x 260 to 320)</text>
+<line x1="985" y1="150" x2="1079" y2="150" stroke="#555" stroke-width="0.8"/>
+<line x1="985" y1="570" x2="1079" y2="570" stroke="#555" stroke-width="0.8"/>
+<polygon points="1075,150 1077.5,157 1072.5,157" fill="#222"/>
+<polygon points="1075,570 1072.5,563 1077.5,563" fill="#222"/>
+<line x1="1075" y1="150" x2="1075" y2="570" stroke="#222" stroke-width="1"/>
+<text x="1070" y="360" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1070 360)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">base 140 wide in x (220 to 360)</text>
+<line x1="1054" y1="480" x2="1114" y2="480" stroke="#555" stroke-width="0.8"/>
+<line x1="1054" y1="360" x2="1114" y2="360" stroke="#555" stroke-width="0.8"/>
+<polygon points="1110,360 1112.5,367 1107.5,367" fill="#222"/>
+<polygon points="1110,480 1107.5,473 1112.5,473" fill="#222"/>
+<line x1="1110" y1="360" x2="1110" y2="480" stroke="#222" stroke-width="1"/>
+<text x="1105" y="420" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1105 420)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">knob centre x 250, 40 from the axle</text>
+<line x1="424" y1="222" x2="420" y2="222" stroke="#555" stroke-width="0.8"/>
+<line x1="424" y1="498" x2="420" y2="498" stroke="#555" stroke-width="0.8"/>
+<polygon points="424,222 426.5,229 421.5,229" fill="#222"/>
+<polygon points="424,498 421.5,491 426.5,491" fill="#222"/>
+<line x1="424" y1="222" x2="424" y2="498" stroke="#222" stroke-width="1"/>
+<text x="419" y="360" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 419 360)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">92 between rails</text>
+<line x1="490" y1="270" x2="486" y2="270" stroke="#555" stroke-width="0.8"/>
+<line x1="490" y1="450" x2="486" y2="450" stroke="#555" stroke-width="0.8"/>
+<polygon points="490,270 492.5,277 487.5,277" fill="#222"/>
+<polygon points="490,450 487.5,443 492.5,443" fill="#222"/>
+<line x1="490" y1="270" x2="490" y2="450" stroke="#222" stroke-width="1"/>
+<text x="485" y="360" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 485 360)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">60 opening</text>
+<line x1="457" y1="488" x2="457" y2="484" stroke="#555" stroke-width="0.8"/>
+<line x1="703" y1="488" x2="703" y2="484" stroke="#555" stroke-width="0.8"/>
+<polygon points="457,488 464,485.5 464,490.5" fill="#222"/>
+<polygon points="703,488 696,490.5 696,485.5" fill="#222"/>
+<line x1="457" y1="488" x2="703" y2="488" stroke="#222" stroke-width="1"/>
+<text x="580" y="483" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">ledge 82 long</text>
+<polygon points="100,100 102.5,107 97.5,107" fill="#222"/>
+<line x1="100" y1="150" x2="100" y2="100" stroke="#222" stroke-width="1"/>
+<polygon points="50,150 57,147.5 57,152.5" fill="#222"/>
+<line x1="100" y1="150" x2="50" y2="150" stroke="#222" stroke-width="1"/>
+<text x="106" y="110" font-size="13" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">+x</text>
+<text x="50" y="168" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">+y</text>
+<text x="1200" y="110" font-size="15" text-anchor="start" font-weight="bold" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">(c) Far end plate,</text>
+<text x="1200" y="128" font-size="15" text-anchor="start" font-weight="bold" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">seen along +y</text>
+<polygon points="1190,330 1254,330 1254,270 1286,270 1286,330 1350,330 1350,150 1190,150" fill="#d4d7dc" fill-opacity="0.55" stroke="#333"/>
+<rect x="1254" y="224" width="32" height="32" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<text x="1270" y="244" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">axle</text>
+<text x="1270" y="306" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">notch</text>
+<line x1="1270" y1="330" x2="1270" y2="140" stroke="#777" stroke-width="0.8" stroke-dasharray="10 3 2 3"/>
+<line x1="1190" y1="330" x2="1190" y2="362" stroke="#555" stroke-width="0.8"/>
+<line x1="1350" y1="330" x2="1350" y2="362" stroke="#555" stroke-width="0.8"/>
+<polygon points="1190,358 1197,355.5 1197,360.5" fill="#222"/>
+<polygon points="1350,358 1343,360.5 1343,355.5" fill="#222"/>
+<line x1="1190" y1="358" x2="1350" y2="358" stroke="#222" stroke-width="1"/>
+<text x="1270" y="353" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">80 wide (x 250 to 330)</text>
+<line x1="1254" y1="330" x2="1254" y2="392" stroke="#555" stroke-width="0.8"/>
+<line x1="1286" y1="330" x2="1286" y2="392" stroke="#555" stroke-width="0.8"/>
+<polygon points="1254,388 1261,385.5 1261,390.5" fill="#222"/>
+<polygon points="1286,388 1279,390.5 1279,385.5" fill="#222"/>
+<line x1="1254" y1="388" x2="1286" y2="388" stroke="#222" stroke-width="1"/>
+<text x="1270" y="383" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">notch 16 wide</text>
+<line x1="1190" y1="150" x2="1160" y2="150" stroke="#555" stroke-width="0.8"/>
+<line x1="1190" y1="330" x2="1160" y2="330" stroke="#555" stroke-width="0.8"/>
+<polygon points="1164,150 1166.5,157 1161.5,157" fill="#222"/>
+<polygon points="1164,330 1161.5,323 1166.5,323" fill="#222"/>
+<line x1="1164" y1="150" x2="1164" y2="330" stroke="#222" stroke-width="1"/>
+<text x="1159" y="240" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1159 240)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">90 tall</text>
+<line x1="1350" y1="270" x2="1378" y2="270" stroke="#555" stroke-width="0.8"/>
+<line x1="1350" y1="330" x2="1378" y2="330" stroke="#555" stroke-width="0.8"/>
+<polygon points="1374,270 1376.5,277 1371.5,277" fill="#222"/>
+<polygon points="1374,330 1371.5,323 1376.5,323" fill="#222"/>
+<line x1="1374" y1="270" x2="1374" y2="330" stroke="#222" stroke-width="1"/>
+<text x="1369" y="300" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1369 300)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">notch 30 tall</text>
+<text x="1200" y="430" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">The plate is 10 thick (y 58 to 68).</text>
+<text x="1200" y="446" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">Plate z 30 to 120; notch z 30 to 60,</text>
+<text x="1200" y="462" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">open at the bottom edge.</text>
+<text x="30" y="735" font-size="18" text-anchor="start" font-weight="bold" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">(b) Side view, looking along +x from the arms</text>
+<text x="30" y="755" font-size="13" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">z up from the table top; y to the left, from the table's centre line (+y toward the left arm)</text>
+<line x1="580" y1="1262" x2="580" y2="794" stroke="#777" stroke-width="0.8" stroke-dasharray="10 3 2 3"/>
+<text x="586" y="798" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">y = 0</text>
+<line x1="175" y1="1025" x2="1075" y2="1025" stroke="#777" stroke-width="0.8" stroke-dasharray="10 3 2 3"/>
+<line x1="160" y1="1250" x2="1075" y2="1250" stroke="#222" stroke-width="1.5"/>
+<rect x="280" y="1232" width="705" height="18" fill="#8c9096" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="904" y="989" width="36" height="243" fill="#b0b4ba" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="328" y="968" width="36" height="264" fill="#b0b4ba" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="328" y="905" width="36" height="27" fill="#b0b4ba" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="406" y="965" width="468" height="153" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="457" y="1103" width="246" height="15" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="1103" width="18" height="15" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="1079" width="18" height="24" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="1103" width="18" height="15" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="1079" width="18" height="24" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="406" y="965" width="468" height="153" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="457" y="1103" width="246" height="15" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="1103" width="18" height="15" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="439" y="1079" width="18" height="24" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="1103" width="18" height="15" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="703" y="1079" width="18" height="24" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="376" y="890" width="30" height="180" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="376" y="1070" width="30" height="90" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="376" y="1070" width="30" height="90" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="364" y="1001" width="12" height="48" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="874" y="965" width="24" height="153" fill="#d4d7dc" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="898" y="1001" width="6" height="48" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="946" y="1001" width="18" height="48" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="964" y="1013" width="18" height="24" fill="#6b6e73" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="982" y="965" width="72" height="120" fill="#f2bf1a" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="760" y="974" width="90" height="24" fill="#1a66d9" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="850" y="875" width="24" height="123" fill="#1a66d9" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="535" y="974" width="90" height="24" fill="none" fill-opacity="0" stroke="#1a66d9" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="625" y="875" width="24" height="123" fill="none" fill-opacity="0" stroke="#1a66d9" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="190" y="932" width="168" height="36" fill="#d91f14" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="190" y="815" width="24" height="153" fill="#d91f14" fill-opacity="0.55" stroke="#333" stroke-width="1"/>
+<rect x="235" y="932" width="168" height="36" fill="none" fill-opacity="0" stroke="#d91f14" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="235" y="815" width="24" height="153" fill="none" fill-opacity="0" stroke="#d91f14" stroke-width="1.6" stroke-dasharray="6 4"/>
+<circle cx="580" cy="1025" r="4" fill="#111"/>
+<text x="340" y="1020" font-size="12" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">axle line, z = 75</text>
+<text x="400" y="1261" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">base plate</text>
+<text x="940" y="1160" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 940 1160)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near pillar</text>
+<text x="348" y="1160" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 348 1160)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far pillar</text>
+<text x="580" y="963" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">cradle rail (nearer one drawn)</text>
+<text x="580" y="1121" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">ledges, end beams, corner stubs inside</text>
+<text x="886" y="1137" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 886 1137)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near end plate</text>
+<text x="391" y="1149" font-size="11" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 391 1149)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far end plate</text>
+<text x="1018" y="1029" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">knob</text>
+<text x="959" y="1073" font-size="11" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">crank</text>
+<text x="805" y="867" font-size="12" text-anchor="middle" font-weight="normal" fill="#1a66d9" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">retaining bar</text>
+<text x="637" y="867" font-size="12" text-anchor="middle" font-weight="normal" fill="#1a66d9" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">closed</text>
+<text x="280" y="980" font-size="12" text-anchor="middle" font-weight="normal" fill="#d91f14" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">lock bolt</text>
+<line x1="280" y1="1250" x2="280" y2="1288" stroke="#555" stroke-width="0.8"/>
+<line x1="985" y1="1250" x2="985" y2="1288" stroke="#555" stroke-width="0.8"/>
+<polygon points="280,1284 287,1281.5 287,1286.5" fill="#222"/>
+<polygon points="985,1284 978,1286.5 978,1281.5" fill="#222"/>
+<line x1="280" y1="1284" x2="985" y2="1284" stroke="#222" stroke-width="1"/>
+<text x="632.5" y="1279" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">base 235 (y -135 to 100), 6 thick</text>
+<line x1="328" y1="1250" x2="328" y2="1318" stroke="#555" stroke-width="0.8"/>
+<line x1="364" y1="1250" x2="364" y2="1318" stroke="#555" stroke-width="0.8"/>
+<polygon points="328,1314 335,1311.5 335,1316.5" fill="#222"/>
+<polygon points="364,1314 357,1316.5 357,1311.5" fill="#222"/>
+<line x1="328" y1="1314" x2="364" y2="1314" stroke="#222" stroke-width="1"/>
+<text x="312" y="1318" font-size="13" text-anchor="end" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far pillar y 72 to 84</text>
+<line x1="904" y1="1250" x2="904" y2="1318" stroke="#555" stroke-width="0.8"/>
+<line x1="940" y1="1250" x2="940" y2="1318" stroke="#555" stroke-width="0.8"/>
+<polygon points="904,1314 911,1311.5 911,1316.5" fill="#222"/>
+<polygon points="940,1314 933,1316.5 933,1311.5" fill="#222"/>
+<line x1="904" y1="1314" x2="940" y2="1314" stroke="#222" stroke-width="1"/>
+<text x="956" y="1318" font-size="13" text-anchor="start" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near pillar y -120 to -108</text>
+<line x1="406" y1="890" x2="406" y2="832" stroke="#555" stroke-width="0.8"/>
+<line x1="376" y1="890" x2="376" y2="832" stroke="#555" stroke-width="0.8"/>
+<polygon points="376,836 383,833.5 383,838.5" fill="#222"/>
+<polygon points="406,836 399,838.5 399,833.5" fill="#222"/>
+<line x1="376" y1="836" x2="406" y2="836" stroke="#222" stroke-width="1"/>
+<text x="360" y="840" font-size="13" text-anchor="end" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far plate 10 thick</text>
+<line x1="580" y1="875" x2="580" y2="820" stroke="#555" stroke-width="0.8"/>
+<line x1="805" y1="875" x2="805" y2="820" stroke="#555" stroke-width="0.8"/>
+<polygon points="580,824 587,821.5 587,826.5" fill="#222"/>
+<polygon points="805,824 798,826.5 798,821.5" fill="#222"/>
+<line x1="580" y1="824" x2="805" y2="824" stroke="#222" stroke-width="1"/>
+<text x="692.5" y="819" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bar travel 75</text>
+<line x1="403" y1="932" x2="403" y2="781" stroke="#555" stroke-width="0.8"/>
+<line x1="358" y1="932" x2="358" y2="781" stroke="#555" stroke-width="0.8"/>
+<polygon points="358,785 365,782.5 365,787.5" fill="#222"/>
+<polygon points="403,785 396,787.5 396,782.5" fill="#222"/>
+<line x1="358" y1="785" x2="403" y2="785" stroke="#222" stroke-width="1"/>
+<text x="342" y="789" font-size="13" text-anchor="end" font-weight="normal" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bolt travel 15</text>
+<line x1="328" y1="932" x2="156" y2="932" stroke="#555" stroke-width="0.8"/>
+<line x1="328" y1="968" x2="156" y2="968" stroke="#555" stroke-width="0.8"/>
+<polygon points="160,932 162.5,939 157.5,939" fill="#222"/>
+<polygon points="160,968 157.5,961 162.5,961" fill="#222"/>
+<line x1="160" y1="932" x2="160" y2="968" stroke="#222" stroke-width="1"/>
+<text x="155" y="950" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 155 950)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bolt gap 12 (z 94 to 106)</text>
+<line x1="328" y1="905" x2="121" y2="905" stroke="#555" stroke-width="0.8"/>
+<line x1="328" y1="1250" x2="121" y2="1250" stroke="#555" stroke-width="0.8"/>
+<polygon points="125,905 127.5,912 122.5,912" fill="#222"/>
+<polygon points="125,1250 122.5,1243 127.5,1243" fill="#222"/>
+<line x1="125" y1="905" x2="125" y2="1250" stroke="#222" stroke-width="1"/>
+<text x="120" y="1077.5" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 120 1077.5)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far pillar 115 (lower part 94)</text>
+<line x1="190" y1="815" x2="86" y2="815" stroke="#555" stroke-width="0.8"/>
+<line x1="190" y1="1250" x2="86" y2="1250" stroke="#555" stroke-width="0.8"/>
+<polygon points="90,815 92.5,822 87.5,822" fill="#222"/>
+<polygon points="90,1250 87.5,1243 92.5,1243" fill="#222"/>
+<line x1="90" y1="815" x2="90" y2="1250" stroke="#222" stroke-width="1"/>
+<text x="85" y="1032.5" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 85 1032.5)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">bolt lug top 145</text>
+<line x1="1054" y1="1025" x2="1079" y2="1025" stroke="#555" stroke-width="0.8"/>
+<line x1="1054" y1="1250" x2="1079" y2="1250" stroke="#555" stroke-width="0.8"/>
+<polygon points="1075,1025 1077.5,1032 1072.5,1032" fill="#222"/>
+<polygon points="1075,1250 1072.5,1243 1077.5,1243" fill="#222"/>
+<line x1="1075" y1="1025" x2="1075" y2="1250" stroke="#222" stroke-width="1"/>
+<text x="1070" y="1137.5" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1070 1137.5)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">axle height 75</text>
+<line x1="940" y1="989" x2="1114" y2="989" stroke="#555" stroke-width="0.8"/>
+<line x1="940" y1="1250" x2="1114" y2="1250" stroke="#555" stroke-width="0.8"/>
+<polygon points="1110,989 1112.5,996 1107.5,996" fill="#222"/>
+<polygon points="1110,1250 1107.5,1243 1112.5,1243" fill="#222"/>
+<line x1="1110" y1="989" x2="1110" y2="1250" stroke="#222" stroke-width="1"/>
+<text x="1105" y="1119.5" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1105 1119.5)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">near pillar 87</text>
+<line x1="1054" y1="965" x2="1149" y2="965" stroke="#555" stroke-width="0.8"/>
+<line x1="1054" y1="1085" x2="1149" y2="1085" stroke="#555" stroke-width="0.8"/>
+<polygon points="1145,965 1147.5,972 1142.5,972" fill="#222"/>
+<polygon points="1145,1085 1142.5,1078 1147.5,1078" fill="#222"/>
+<line x1="1145" y1="965" x2="1145" y2="1085" stroke="#222" stroke-width="1"/>
+<text x="1140" y="1025" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1140 1025)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">knob 40 (z 55 to 95)</text>
+<line x1="874" y1="965" x2="1184" y2="965" stroke="#555" stroke-width="0.8"/>
+<line x1="874" y1="1118" x2="1184" y2="1118" stroke="#555" stroke-width="0.8"/>
+<polygon points="1180,965 1182.5,972 1177.5,972" fill="#222"/>
+<polygon points="1180,1118 1177.5,1111 1182.5,1111" fill="#222"/>
+<line x1="1180" y1="965" x2="1180" y2="1118" stroke="#222" stroke-width="1"/>
+<text x="1175" y="1041.5" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1175 1041.5)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">rails 51 (z 44 to 95)</text>
+<line x1="406" y1="890" x2="1219" y2="890" stroke="#555" stroke-width="0.8"/>
+<line x1="406" y1="1160" x2="1219" y2="1160" stroke="#555" stroke-width="0.8"/>
+<polygon points="1215,890 1217.5,897 1212.5,897" fill="#222"/>
+<polygon points="1215,1160 1212.5,1153 1217.5,1153" fill="#222"/>
+<line x1="1215" y1="890" x2="1215" y2="1160" stroke="#222" stroke-width="1"/>
+<text x="1210" y="1025" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" transform="rotate(-90 1210 1025)" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">far plate 90 (z 30 to 120)</text>
+</svg>
