@@ -1,5 +1,7 @@
 # Mount a grinding wheel safely on a bench grinder
 
+Category: Safety and alignment. A cracked or wrongly mounted abrasive wheel can burst at running speed and throw fragments at the operator; the robot has to reject the damaged wheel, build the stack in order with a blotter each side of the wheel, and tighten the nut enough to hold the wheel but not so far that it cracks.
+
 A bench grinder stands on the table with its spindle bare. A parts tray in front of it holds the mounting parts: a
 black inner flange keyed to the spindle's flat, a steel outer flange, two paper blotters, a good grinding wheel and a
 damaged one (a chip out of its rim and a crack). The spindle nut, with a four-spoke handle, stands on a post in line
@@ -73,3 +75,37 @@ The model: the nut's thread is a NewtonMimicAPI mimic joint (which the PhysX GPU
 to its advance, 2.5 mm per turn; its turning torque is a capped damping drive, 0.12 N m of free-run drag plus 0.008 N m
 per N of clamp force; the clamp is a 30 N/mm spring between the nut and its washer face; the spindle lock closes the
 spindle joint's limits while the button is down 2.5 mm or more.
+
+## Real-world inspection and tightening
+
+Inspection. The damaged wheel carries a visible rim chip and a crack line on both faces, so the robot inspects by eye. On
+real hardware the trial supervisor inspects the good wheel before the trial, visually and by ring test, as OSHA
+29 CFR 1910.215(d)(1) requires immediately before mounting. The simulation has no ring test.
+
+Tightening rule. Wheel makers and abrasive-wheel safety rules say to tighten the nut only enough to drive the wheel without slipping,
+because over-tightening distorts the flanges and can crack the wheel. The simulation has no wheel strength model; it
+stands in for this with a turn-past-seat limit of 240 degrees. Its stack is one 30 N/mm spring (`CRUSH_K`,
+`wheel_mount/fixture.py:101`), far softer than real blotters, so the 240 degrees (53 N, 0.54 N m) is a property of the
+simulated stack, not of a real wheel. The smallest turn that passes the tug is about 29 degrees past the seat (9 N), so
+the limit is about 8 times the smallest passing turn. On a real grinder the supervisor repeats that ratio: mark the
+nut where it first stiffens, tighten in 5 degree steps with the braked spin and tug at each, note the smallest turn
+past the mark that passes both, and set the limit at 8 times that turn, or the wheel maker's limit if lower. In a
+trial the turn past the seat is read from the same kind of mark, as in the simulation. No real angle is given,
+because it depends on the wheel, flanges and blotters.
+
+Simulated numbers, from the code's constants (thread 2.5 mm per turn, `fixture.py:85`; spring 30 N/mm, `fixture.py:101`;
+nut torque = 0.12 N m drag + 0.008 N m per N of clamp force, `fixture.py:107-108, 124-128`; seat = 0.1 mm squeeze, 3 N,
+`task.py:67`; crack at 240 degrees past the seat, `task.py:69`):
+
+- One degree of turn squeezes the stack 2.5/360 = 0.00694 mm, which is 0.208 N.
+- At the seat: 0.1 mm, 3 N clamp force, 0.144 N m nut torque.
+- At the crack limit, 240 degrees past the seat: 0.1 + 1.667 = 1.77 mm, about 53 N clamp force, about 0.54 N m nut torque.
+- Tug (18 N along the spindle, must move under 0.3 mm, `task.py:82`): from the spring model alone, the stack needs about
+  9 N of preload (18 N less 0.3 mm x 30 N/mm), which is 0.3 mm of squeeze, about 29 degrees past the seat. This is an
+  estimate from the spring, not a measured threshold.
+- Spin (0.6 N m drive, 0.1 N m brake, slip under 5 degrees, `task.py:75-81`): by hand estimate from the friction
+  coefficients and contact radii the wheel is driven without slip from roughly 9 to 34 degrees past the seat, so the tug
+  is the binding lower limit; this was not measured in a run. The scripted demo stops about 114 degrees past the seat; its
+  logged squeeze is 0.8 mm (about 24 N, 0.31 N m), where the wheel slips 1 degree and moves 0.025 mm in the tug.
+- So the window runs from about 29 degrees past the seat (9 N, the tug) to just under 240 degrees (53 N, the crack).
+  The crack is a fixed turn limit, not a force limit.
