@@ -3,9 +3,11 @@
 A small lathe headstock with a 3-jaw chuck stands on the table, its jaws open. The robot must slide a round aluminium bar
 into the chuck so 50 mm sticks out of the jaws, tighten the jaws on it with the chuck key (a T-handle seated in a
 socket on top of the chuck), then take the key out of the chuck and stand it back in its holder. The bar counts as
-tight when the key has turned at least 60 degrees past first contact of all three jaws and, with the key out and every
-hand clear, the bar holds a 30 N pull out of the chuck, slipping less than 1 mm. A key left in the
-chuck, or resting on it, caps the score at 0.1.
+tight when, with the key out and every hand clear, the bar holds a 30 N pull out of the chuck, slipping less than 1 mm.
+On real hardware, at the end of the run with the robot's arms clear, mark the bar with a pen line at the jaws' front
+faces, loop a cord round its outer end and pull it with a spring scale straight out along the spindle axis, raising the
+force to 30 N over about 0.5 s and holding it 1 s; the mark must move less than 1 mm (steel rule or caliper). A key left
+in the chuck, or resting on it, caps the score at 0.1.
 
 The task file is [`task.py`](task.py) (scene, scoring and scripted demo). The lathe is our own model in
 [`chuck_key/`](chuck_key): `lathe.py` builds it (one articulation: the headstock, chuck body, key holder and V-block
@@ -60,4 +62,4 @@ PhysX contact settings; the 30 N pull is checked in the full station scene, wher
 
 The chuck model: a 3 mm-per-turn coupling (NewtonMimicAPI mimic joints, which the PhysX GPU pipeline honours; PhysX's
 own PhysxMimicJointAPI was ignored here), a 0.25 N m friction threshold on the pinion (a capped damping drive) and a
-2 mm sprung give in each jaw (50 N/mm). The demo turns the key about 690 degrees, about 80 past first contact. The socket has a 3 mm lead-in and the holder a 6 mm one.
+2 mm sprung give in each jaw (50 N/mm). The demo turns the key about 680 degrees, about 65 past the point where all three jaws touch the bar. The socket has a 3 mm lead-in and the holder a 6 mm one.

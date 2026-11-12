@@ -6,8 +6,8 @@ turning it anticlockwise, seen from above, closes all three jaws together. The i
 
 Chuck the bar in the lathe with 50 mm sticking out of the jaws, tighten it with the chuck key, and leave the lathe ready to start with the key put away in its holder.
 
-Tight means the key turned at least 60 degrees after all three jaws touched the bar, and the bar holds: once the key
-is out of the chuck and every hand is 6 cm or more from the bar, the judge pulls the bar straight out of the chuck with
+Tight means the bar holds: once the key is out
+of the chuck and every hand is 6 cm or more from the bar, the judge pulls the bar straight out of the chuck with
 30 N (ramped over 0.5 s, then held 1 s); it must slip less than 1 mm. Leaving the key in or on the chuck, its jaws or
 the bar caps the score at 0.1.
 
@@ -56,7 +56,6 @@ OBJECTS = [
 
 # -- scoring -----------------------------------------------------------------------------------------------------------
 PULL_N, PULL_RAMP_S, PULL_SLIP, PULL_HOLD_S = 30.0, 0.5, 0.001, 1.0  # the judge's pull test
-TIGHTEN = math.radians(60)  # the key must turn at least this far after all three jaws touch the bar
 HANDS_OFF = 0.06  # every fingertip centre at least this far from the bar's surface
 KEY_CLEAR = 0.07  # ... and from the key's T-bar centre (the T-bar is 4.5 cm each side) for the key to count as put away
 CAP = 0.1  # the most a trial scores with the key in or on the chuck
@@ -138,20 +137,10 @@ def pull_ready(objects):
     return clamped(objects) and hands_off(objects) and not key_on_chuck(objects)
 
 
-def turned_past_contact(objects):
-    """How far the key has turned since all three jaws first touched the bar (rad; nan before they have). The
-    yam_chuck embodiment records the pinion's angle when clamped() first holds, and forgets it if the bar comes out
-    of the jaws."""
-    angle, contact, _ = objects["pinion"].pos
-    return float(angle - contact)
-
-
 def locked(objects):
-    """Tightened at least TIGHTEN past first contact, and the pull has held 30 N for 1 s with the bar slipping less
-    than 1 mm."""
+    """The pull has held 30 N for 1 s with the bar slipping less than 1 mm."""
     force, slip, held = objects["pull_test"].pos
-    past = turned_past_contact(objects)
-    return bool(past >= TIGHTEN and force >= PULL_N - 1e-6 and slip < PULL_SLIP and held >= PULL_HOLD_S - 1e-6)
+    return bool(force >= PULL_N - 1e-6 and slip < PULL_SLIP and held >= PULL_HOLD_S - 1e-6)
 
 
 def key_tilt(objects):
@@ -215,7 +204,7 @@ TBAR_SEATED = TOP + L.KEY_SEATED_Z + L.TBAR_Z  # T-bar axis height with the key 
 TBAR_HOME = KEY_HOME_Z + L.TBAR_Z
 CARRY_Z = TBAR_SEATED + 0.020  # T-bar height carrying the key over the chuck (drive 8 mm above the socket)
 TURN = math.radians(750)  # hand travel in four sweeps; the key ends ~60 degrees behind it (KEY_LAG per regrip), so
-# the pinion turns ~690: ~600 to close the jaws on the bar, ~90 more (TIGHTEN is 60)
+# the pinion turns ~680: ~610 to close the jaws on the bar, ~70 more to clamp it
 ARC_SPEED = math.radians(45)  # rad/s while turning
 KEY_LAG = math.radians(20)  # the key ends each turn about 20 degrees behind the hand (socket play, arm lag; measured)
 BAR_GRIP = 0.022  # the right hand holds the bar this far from its outer end

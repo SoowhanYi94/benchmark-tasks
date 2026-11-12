@@ -35,7 +35,7 @@ KEY_HOME = state((*t.HOLDER, t.KEY_HOME_Z), rot((0, 0, 1), -math.pi / 2))
 KEY_IN_CHUCK = state(t.SOCKET, rot((0, 0, 1), 0.3))
 
 
-def world(b=None, jaws=(CLOSED,) * 3, hands=FAR, pull=(30.0, 0.0, 1.0), key=KEY_HOME, pinion=(12.5, 10.5, 0.0)):
+def world(b=None, jaws=(CLOSED,) * 3, hands=FAR, pull=(30.0, 0.0, 1.0), key=KEY_HOME, pinion=(12.5, 0.0, 0.0)):
     return {"bar": b or bar(), "jaws": state(jaws), "pinion": state(pinion), "left_tcp": state(hands[0]),
             "right_tcp": state(hands[1]), "pull_test": state(pull), "key": key}
 
@@ -163,11 +163,12 @@ def test_key_held_high_above_the_chuck_is_not_capped():
     assert not t.key_on_chuck(world(key=high))
 
 
-def test_barely_snug_chuck_is_not_tight():
-    snug = (10.5 + math.radians(20), 10.5, 0.0)  # 20 degrees past first contact
-    assert t.score(world(pinion=snug)) == pytest.approx(0.4)
-    assert t.score(world(pinion=(1.0, math.nan, 0.0))) == pytest.approx(0.4)  # never recorded as touching
+def test_tight_is_the_pull_alone_whatever_the_key_turn():
+    # jaws on the bar and the pull held: tight, with the key turned barely at all, or far
+    for angle in (0.0, 1.0, 40.0):
+        assert t.score(world(pinion=(angle, 0.0, 0.0))) == pytest.approx(1.0)
 
 
-def test_sixty_degrees_past_contact_is_tight():
-    assert t.score(world(pinion=(10.5 + math.radians(61), 10.5, 0.0))) == pytest.approx(1.0)
+def test_failed_pull_is_not_tight():
+    assert t.score(world(pull=(0.0, 0.0012, 0.0))) == pytest.approx(0.4)  # the bar slipped, pull stopped
+    assert t.score(world(pull=(30.0, 0.0012, 1.0))) == pytest.approx(0.4)  # slipped 1.2 mm

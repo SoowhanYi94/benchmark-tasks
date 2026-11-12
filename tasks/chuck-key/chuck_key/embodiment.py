@@ -3,7 +3,7 @@
 The task file lists three placeholder boxes: `lathe` (spawned as the lathe's articulation: headstock, chuck, pinion,
 jaws, key holder, V-block), `bar` and `key` (spawned as the round bar and the chuck key, free rigid bodies). The scorer
 gets each step: `bar` and `key` (their body frames: centre / shoulder, and orientation), `jaws` (pos = each jaw face's
-radius from the spindle axis, m), `pinion` (pos = its angle and its angle when all three jaws first touched the bar, rad; nan until then), `left_tcp` / `right_tcp` (each gripper's fingertip
+radius from the spindle axis, m), `pinion` (pos = its angle, rad), `left_tcp` / `right_tcp` (each gripper's fingertip
 centre) and `pull_test`.
 
 The judge's pull: while the task's `pull_ready(objects)` holds (jaws on the bar, hands clear, key out), a force pulling the bar out of the chuck (-y) ramps to
@@ -61,7 +61,6 @@ class ChuckEmbodiment(YamArenaEmbodiment):
     def reset(self, scene, *, seed=None):
         self._pull = {"force": 0.0, "y0": None, "failed": False, "held": 0.0, "turn": 0.0}
         self._last = None
-        self._contact = None
         obs = super().reset(scene, seed=seed)
         self._set_pull(0.0)
         return obs
@@ -183,15 +182,6 @@ class ChuckEmbodiment(YamArenaEmbodiment):
         def object_states(env, names):
             names = [n for n in names if n not in CUSTOM]
             states = {**original(env, names), **self._states()}
-            m = self.task.module
-            angle = float(states["pinion"].pos[0])
-            states["pinion"] = states["pinion"].__class__(**{**states["pinion"].__dict__, "pos": np.array((angle, math.nan, 0.0))})
-            if not m.inserted(states):
-                self._contact = None  # the bar came out: first contact is measured afresh
-            elif self._contact is None and m.clamped(states):
-                self._contact = angle
-            if self._contact is not None:
-                states["pinion"].pos[1] = self._contact
             self._last = states
             return states
 
@@ -205,7 +195,7 @@ class ChuckEmbodiment(YamArenaEmbodiment):
             print(f"CHUCK t={self._t:5.2f} pinion {math.degrees(st['pinion'].pos[0]):6.1f} deg | bar stick-out "
                   f"{1000 * m.stick_out(st):5.1f} mm offset {np.round(1000 * m.bar_offset(st), 2).tolist()} tilt "
                   f"{math.degrees(m.bar_tilt(st)):.2f} gaps {np.round(1000 * m.jaw_gaps(st), 2).tolist()} | ins {m.inserted(st)} "
-                  f"clamp {m.clamped(st)} past {math.degrees(m.turned_past_contact(st)):.0f} hands_off {m.hands_off(st)} pull {np.round(st['pull_test'].pos, 4).tolist()} | key "
+                  f"clamp {m.clamped(st)} hands_off {m.hands_off(st)} pull {np.round(st['pull_test'].pos, 4).tolist()} | key "
                   f"{np.round(1000 * st['key'].pos, 1).tolist()} tilt {math.degrees(m.key_tilt(st)):.1f} on_chuck "
                   f"{m.key_on_chuck(st)} home {m.key_home(st)} | L {np.round(1000 * st['left_tcp'].pos).tolist()} "
                   f"R {np.round(1000 * st['right_tcp'].pos).tolist()} | score {m.score(st):.2f}", flush=True)
