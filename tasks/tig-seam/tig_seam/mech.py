@@ -63,7 +63,7 @@ TORCH_HULL = (np.array((_cable_x - CABLE["len"] / 2, -GRIP["y"] / 2, TIP[2])), n
 
 # -- rod (rod frame: origin at the sleeve's centre; +x its heading) --------------------------------------------------
 ROD_SLOPE = math.radians(20.0)
-ROD_D = 0.0032  # 3.2 mm (1/8 in) filler, painted yellow
+ROD_D = 0.0032  # 3.2 mm (1/8 in) filler: bare steel in the real trial, drawn yellow here so the cameras can see it
 SLEEVE = 0.025  # nylon grip sleeve, a 25 mm cube
 ROD_LEN = 0.2125  # sleeve centre to tip, along the rod
 ROD_DIR = np.array((math.cos(ROD_SLOPE), 0.0, -math.sin(ROD_SLOPE)))

@@ -26,7 +26,7 @@ def st(p, a, v=0.0):
 def main():
     if os.environ.get("NOCAL"):  # perfect tracking: drop the arm-give offsets the plan aims against
         t._cal = lambda s: (0.0, 0.0)
-        t.AHEAD_A, t.AHEAD_B, t.ROD_SIDE_A, t.ROD_SIDE_B, t.ROD_LOW_B, t.ROD_AIM = t.AHEAD, t.AHEAD, 0.0, 0.0, 0.0, t.ROD_AIM - 0.003
+        t.AHEAD_A, t.AHEAD_B, t.ROD_SIDE_A, t.ROD_SIDE_B, t.ROD_LOW_B, t.ROD_AIM = t.AHEAD, t.AHEAD, 0.0, 0.0, (0.0, 0.0), t.ROD_AIM - 0.0029  # tip centre 2 mm up
     wps = t.demo()
     plans = {a: ArmPlan(wps[a], BASES[a]) for a in wps}
     T = max(p.duration for p in plans.values())

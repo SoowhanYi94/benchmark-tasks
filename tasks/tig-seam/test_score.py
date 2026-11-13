@@ -49,7 +49,7 @@ def fresh():
 
 
 def weld(speed=0.003, dab=1.5, arc=0.0035, ahead=0.0055, rod_hand="right_tcp", lift=0.010, stop=None, rod=True, lat=0.0, dip_at=None,
-         rod_into_tungsten_at=None):
+         rod_into_tungsten_at=None, down_h=0.002):
     """Run the ideal process step by step through note_step: dwell 2.7 s at the start, travel, turn at the corner, crater 1 s."""
     la = 0.12
     track = [(0.0, LA)] * 54
@@ -77,7 +77,7 @@ def weld(speed=0.003, dab=1.5, arc=0.0035, ahead=0.0055, rod_hand="right_tcp", l
         ph = (clock % dab) / dab if clock >= 0 else 0.9
         down = 0.25 <= ph < 0.5
         rtip = tip + ahead * u
-        rtip[2] = t.PLATE_Z + (0.002 if down else lift)
+        rtip[2] = t.PLATE_Z + (down_h if down else lift)
         if rod_into_tungsten_at is not None and abs(s - rod_into_tungsten_at) < 0.001:
             rtip = tip + 0.001 * u
         w = working(tip, lean, rtip if rod else rtip + (0, 0, 0.2), heading, rod_hand=rod_hand)
@@ -157,6 +157,31 @@ def test_rod_not_held_scores_zero():
 def test_rod_held_down_without_dabbing_feeds_once():
     weld(dab=1e9, lift=0.002)  # the tip stays down the whole way: one dab at most
     assert t._trial["dabs"] <= 1 and settle() <= 0.05
+
+
+def test_rod_down_threshold_is_its_lowest_edge_within_1mm():
+    assert t.ROD_DOWN == pytest.approx(M.ROD_D / 2 * math.cos(M.ROD_SLOPE) + 0.001) and t.ROD_DOWN == pytest.approx(0.0025, abs=2e-5)
+
+
+def test_rod_hovering_at_3mm_feeds_nothing():
+    """Everything else ideal, but the rod's tip centre bottoms 3.0 mm up (its lowest edge 1.5 mm clear of the plate): no filler."""
+    weld(down_h=0.003)
+    assert t._trial["dabs"] == 0 and not t._trial["filler"].any() and settle() == 0.0
+
+
+def test_rod_down_at_2mm_feeds():
+    weld(down_h=0.002)
+    assert t._trial["dabs"] > 40 and t.good_segments().all() and settle() == 1.0
+
+
+def test_a_dab_over_no_pool_is_not_counted():
+    """A dab with the arc on and the rod in the zone, but before any segment is molten, feeds nothing and is not a dab."""
+    tip = np.array((*M.seam_point(0.05)[0], t.PLATE_Z + 0.0035))
+    u = np.array((-1.0, 0.0, 0.0))
+    up, down = tip + 0.0055 * u + (0, 0, 0.01), tip + 0.0055 * u + (0, 0, 0.002 - 0.0035)
+    for r in (up, down):
+        t.note_step(working(tip, LA, r, t.HEAD_A), DT)
+    assert t._trial["arc"] and t._trial["dabs"] == 0 and t._trial["dabs_cold"] == 1 and not t._trial["filler"].any()
 
 
 def test_rod_behind_the_torch_feeds_nothing():

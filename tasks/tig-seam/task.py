@@ -3,7 +3,7 @@ at a steady arc length; the other dabs the filler rod into the front of the pool
 Then both tools go back on their rests.
 
 Run it:  inspect-robots run --embodiment yam_tig -E task=task.py -E object_jitter=0 --policy yam_scripted --no-prompt \\
-           --instruction "Weld the joint between the white and yellow marks with the TIG torch, dabbing the yellow filler rod into the front of the pool to lay one sound bead, then put both tools back on their rests and move both hands away." --scorer task_score
+           --instruction "Weld the joint between the white and yellow marks with the TIG torch, dabbing the filler rod into the front of the pool to lay one sound bead, then put both tools back on their rests and move both hands away." --scorer task_score
 
 `yam_tig` (tig_seam/embodiment.py) spawns the bench, torch and rod, reports each gripper's fingertip midpoint, and shows
 the bead pieces that note_step switches on.
@@ -12,9 +12,10 @@ The weld is a geometric event, scored per 5 mm segment of the 200 mm joint (heat
 - Arc: the torch is in a hand, and its tungsten tip is 2-5 mm above the plates and within 4 mm of the joint line.
 - Heat: while the arc is on, each segment whose centre is within 8 mm of the tip gains its arc time. It's molten (the
   pool) while under the arc with 0.5 s or more; fused at 3 s; burnt through at 9 s.
-- Filler: a dab is the rod tip, in the other hand, coming down to the plates (within 3.5 mm) after being lifted 6 mm or
-  more. If it lands 3-10 mm ahead of the tungsten along the torch's lean and within 4 mm of the line, each molten segment
-  within 6 mm of the rod tip gets one dab of filler.
+- Filler: a dab is the rod, in the other hand, coming down onto the plates (the centre of its tip's end within 2.5 mm of their
+  top: at the 3.2 mm rod's 20 degree slope, its lowest edge within 1 mm) after being lifted 6 mm or more. If it lands 3-10 mm ahead
+  of the tungsten along the torch's lean and within 4 mm of the line, each molten segment within 6 mm of the rod tip gets
+  one dab of filler. A dab that reaches no molten segment counts for nothing.
 - Contamination, latched: the tungsten tip within 0.5 mm of the plates, or the rod within 0.5 mm of the tungsten.
   From then on there's no arc, and the score is capped at 0.5.
 """
@@ -54,7 +55,9 @@ LAT = 0.004  # tip and rod tip within this of the joint line
 R_HEAT = 0.008  # the arc heats segment centres within this of the tip (plan)
 H_MELT, H_FUSE, H_BURN = 0.5, 3.0, 9.0  # s of arc: pool, fused, burnt through (at 16 mm of footprint: 1.8-5.3 mm/s of travel)
 ZONE = (0.003, 0.010)  # the rod tip this far ahead of the tungsten, along the lean: the front of the pool
-ROD_DOWN, ROD_UP = 0.0035, 0.006  # rod tip centre height above the plates: down in a dab; lifted out between dabs
+# rod tip centre height above the plates: down in a dab (the rod's lowest edge, 1.5 mm below its tip centre at the
+# 20 degree slope, within 1 mm of the plates' top); lifted out between dabs
+ROD_DOWN, ROD_UP = (M.ROD_D / 2) * math.cos(M.ROD_SLOPE) + 0.001, 0.006
 DAB_R = 0.006  # a dab feeds molten segments within this of the rod tip
 ROD_KEEP = (M.TUNGSTEN_D + M.ROD_D) / 2 + 0.0005  # rod and tungsten axes closer than this: they touched
 HELD = 0.025  # a gripper's fingertip midpoint within this of a tool's grip centre holds it
@@ -195,8 +198,8 @@ def note_step(objects, dt):
             if two_hands and in_zone and arc:
                 feed = tr["molten"] & (np.linalg.norm(SEG_XY - w["rtip"][:2], axis=1) <= DAB_R)
                 tr["filler"][feed] += 1
-                tr["dabs"] += 1
-                tr["dabs_cold"] += int(not feed.any())
+                tr["dabs"] += int(feed.any())  # a dab that reaches no molten segment counts for nothing
+                tr["dabs_cold"] += int(not feed.any())  # (kept for the debug log only)
         tr["armed"] = False
     elif w["rh"] >= ROD_UP:
         tr["armed"] = True
@@ -279,14 +282,15 @@ DT = 0.05
 SPEED = 0.003 * (2.0 if VARIANT == "fast" else 1.0)  # travel, m/s: typical 100-250 mm/min for this work
 DAB_T = 1.25  # one dab per 1.25 s: about 3.75 mm apart at 3 mm/s, so each segment is fed
 ARC_AIM = 0.0035 + float(os.environ.get("TIG_LIFT", "0"))  # TIG_LIFT: debugging only, to measure the arm's give in free air
-AHEAD = 0.0055  # where the rod tip settles, ahead of the tungsten; coming in at 45 degrees it first reaches the scorer's 3.5 mm about 6.5 mm ahead, the middle of its 3-10 mm
+AHEAD = 0.0055  # where the rod tip settles, ahead of the tungsten; coming in at 45 degrees it reaches the scorer's 2.5 mm about 6-7 mm ahead, the middle of its 3-10 mm
 # The rod hand's give, measured from logged runs (r4f-r7): on the first leg the tip came down 2 mm to the left and 3 mm
 # low, and settled where aimed along the travel; on the second, 4 mm to the right, 1.7 mm low and 4-5 mm further ahead.
-# Each dab is aimed the other way by as much, so the tip itself comes down on the line, about 2.5 mm up (0.9 mm clear).
+# Each dab is aimed the other way by as much, so the tip itself comes down on the line, its centre about 2 mm up: the
+# rod's lowest edge about 0.5 mm clear of the plate (it touches at 1.5 mm; pressed on, it skids into the tungsten).
 AHEAD_A, AHEAD_B = AHEAD, AHEAD - 0.005  # aimed ahead on each leg
 ROD_SIDE_A, ROD_SIDE_B = -0.002, 0.004  # aimed to the left of the travel, on each leg
-ROD_LOW_B = 0.0023  # aimed lower on the second leg
-ROD_AIM = 0.0055 + float(os.environ.get("TIG_ROD_LIFT", "0"))  # rod tip centre aimed this high above the plates' top on the first leg (TIG_ROD_LIFT: debugging only)
+ROD_LOW_B = 0.00165, 0.0004  # aimed lower on the second leg: this much at the corner, plus up to this much by its end (r10: the hand sagged less along it)
+ROD_AIM = 0.0050 + float(os.environ.get("TIG_ROD_LIFT", "0"))  # rod tip centre aimed this high above the plates' top on the first leg (TIG_ROD_LIFT: debugging only)
 ROD_OUT = 0.008, 0.008  # between dabs the rod tip rises this much and moves this much further ahead: out at 45 degrees, clear of the cup's rim
 ROD_WAIT = 0.008, 0.010, 1.0  # before the first dab the rod waits this much higher and further ahead
 # still, clear of the tungsten while the torch comes down to strike; it closes in over the last 1 s
@@ -443,12 +447,13 @@ def _u(lean_a):
     return np.array((math.cos(lean_a), math.sin(lean_a), 0.0))
 
 
-def _rod_target(tip, lean_a, heading, phase):
+def _rod_target(tip, lean_a, heading, phase, s=0.0):
     """The rod tip's target for a dab phase in [0, 1): down (in the pool's front) for the middle of the cycle, else out."""
     u = np.array((math.cos(lean_a), math.sin(lean_a), 0.0))
     leg2 = heading > 0.5 * (HEAD_A + HEAD_B)
     side = np.array((-u[1], u[0], 0.0))  # to the left of the travel
-    down = np.array((tip[0], tip[1], PLATE_Z + ROD_AIM - (ROD_LOW_B if leg2 else 0.0))) + (AHEAD_B if leg2 else AHEAD_A) * u
+    low = ROD_LOW_B[0] + ROD_LOW_B[1] * min(max((s - 0.12) / (M.SEAM_LEN - 0.12), 0.0), 1.0) if leg2 else 0.0
+    down = np.array((tip[0], tip[1], PLATE_Z + ROD_AIM - low)) + (AHEAD_B if leg2 else AHEAD_A) * u
     down = down + (ROD_SIDE_B if leg2 else ROD_SIDE_A) * side
     out = down + (0.0, 0.0, ROD_OUT[0]) + ROD_OUT[1] * u  # up and forward out of the pool, away from the tungsten, and back down
     if phase < 0.25:
@@ -511,7 +516,7 @@ def demo():
             clock += DT
             ph = (clock % DAB_T) / DAB_T if clock >= 0 else 0.9
             first = first and clock < 0
-        rt = _rod_target(_tip_at(s, lean_a, ARC_AIM, cal=False), lean_a, heading, ph) + _wait(clock if first else 0.0, _u(lean_a))
+        rt = _rod_target(_tip_at(s, lean_a, ARC_AIM, cal=False), lean_a, heading, ph, s) + _wait(clock if first else 0.0, _u(lean_a))
         if phase == "arc off":
             rt = rt + (0, 0, 0.02 * (z - ARC_AIM) / 0.025)
         rp, ryaw = rod_tcp(rt, heading)
