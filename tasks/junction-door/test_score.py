@@ -188,6 +188,25 @@ def test_plug_pulled_out_after_seating_caps_at_02():
     assert tr.unseated and tr.score() == 0.2 and tr.phase == "robot"
 
 
+def test_plug_pulled_out_by_the_door_on_the_way_open_is_a_failed_test_at_06():
+    tr = finished_robot_phase()
+    run(tr, [(0.4, DONE), (1.0, dict(DONE, door=80.0)), (1.5, dict(DONE, door=91.0, depth=0.004)),
+             (5.0, dict(DONE, depth=0.004))])
+    assert tr.test_unseated and not tr.unseated and tr.phase == "done" and tr.score() == 0.6
+
+
+def test_plug_pulled_out_by_the_door_after_115_deg_is_a_failed_test_at_08():
+    tr = finished_robot_phase()
+    run(tr, [(0.4, DONE), (2.5, dict(DONE, door=120.0)), (2.0, dict(DONE, door=60.0, depth=0.004)),
+             (3.0, dict(DONE, depth=0.004))])
+    assert tr.test_unseated and not tr.unseated and tr.score() == 0.8 and not tr.success()
+
+
+def test_plug_stays_in_through_the_door_test_scores_10():
+    tr = passed_door_test(finished_robot_phase())
+    assert not tr.test_unseated and not tr.unseated and tr.score() == 1.0
+
+
 def test_hand_in_the_way_during_the_door_test_fails_it():
     tr = finished_robot_phase()
     run(tr, [(0.4, DONE), (2.5, dict(DONE, door=120.0, hands=False)), (5.0, DONE)])

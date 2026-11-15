@@ -400,7 +400,8 @@ class Tracker:
         held still for 1 s); 0.8 the test swung the door to its stop with the plug seated and the cord clipped; 1.0 it
         shut and latched it again with nothing trapped, all still. Every rung needs both hands clear of the box.
         0 if the cord was ever across the rim with the door within 8 deg of shut, or the door came that close before
-        the plug was first seated; at most 0.2 once the plug has come out after being seated."""
+        the plug was first seated; at most 0.2 once the plug has come out after being seated and before the door test
+        began. A plug pulled out during the door test fails the test (0.6, or 0.8 after the door reached 115 deg)."""
         m = self.last
         if not m or self.shut_before_plug or self.pinched:
             return 0.0
