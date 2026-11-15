@@ -156,15 +156,24 @@ def test_opposite_signs_are_not_parallel():
     assert not t.parallel(world(q1=-BENT, q2=BENT))
 
 
-def test_leaving_the_bed_is_zero_for_good():
+def test_crossing_the_bed_edge_mid_run_is_scored_by_the_final_state():
+    # part of the tube runs past the bed's edge mid-way; it ends finished on the template
     t.note_step(world(at=(0.2, 0.60, Z)), 0.05)
-    assert t._trial["bad"]
-    assert run(finished()) == 0.0
+    assert not t._trial["bad"]
+    assert run(finished()) == 1.0
 
 
-def test_falling_off_is_zero_for_good():
+def test_falling_off_mid_run_is_scored_by_the_final_state():
     t.note_step(world(at=(0.2, 0.2, t.TOP - 0.05)), 0.05)
-    assert t._trial["bad"]
+    assert not t._trial["bad"]
+    assert run(finished()) == 1.0
+
+
+def test_a_good_offset_left_off_the_bed_scores_by_the_ladder():
+    # bends, parallel ends and offset right, but it ends off the bed so not on the template: 0.75
+    w = world(at=(0.2, 0.60, Z), psi=math.pi + BENT, q1=-BENT, q2=-BENT)
+    assert not t.on_bed(w) and not t.on_template(w)
+    assert run(w) == 0.75
 
 
 def test_going_back_does_not_clear_a_violation():
@@ -290,12 +299,12 @@ def test_an_underbent_band_can_take_another_sweep():
     assert abs(lims[0][0] + math.radians(25.0) + t.STEP) < 1e-9
 
 
-def test_an_end_overhanging_the_bed_is_zero_for_good():
+def test_an_end_overhanging_the_bed_is_not_penalised():
     # the block's well inside, but the nose runs past the bed's far edge
     w = world(at=(M.BED["x1"] - 0.10, 0.2, Z), psi=math.pi / 2)
     assert t.BOXES and not t.on_bed(w)
     t.note_step(w, 0.05)
-    assert t._trial["bad"]
+    assert not t._trial["bad"]
 
 
 def test_the_start_and_the_template_lie_on_the_bed():

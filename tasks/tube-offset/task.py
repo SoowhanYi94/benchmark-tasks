@@ -242,22 +242,19 @@ def on_bed(objects):
 
 
 def note_step(objects, dt):
-    """Called by the embodiment after every control step: a bend past saving or two same-way bends ruin the tube for good, as does leaving the bed;
-    and the clock for all at rest."""
+    """Called by the embodiment after every control step: a bend past saving or two same-way bends ruin the tube for good; and the clock for
+    all at rest. Leaving the bed is not penalised: only the final state counts for where the tube lies."""
     a, b = bends(objects)
     if max(_trial["peak"]) - SPRINGBACK > RUIN or max(abs(a), abs(b)) > RUIN:
         _trial.update(bad=True, why=_trial["why"] or "overbent")
     if _trial["sign"][0] * _trial["sign"][1] != 0 and min(_trial["peak"]) >= BENT_ANY and _trial["sign"][0] != _trial["sign"][1]:
         _trial.update(bad=True, why=_trial["why"] or "same way")  # same-way bends make a U, not an offset
-    if not on_bed(objects):
-        _trial.update(bad=True, why=_trial["why"] or "off the bed")
     still = all(np.linalg.norm(objects[n].lin_vel) <= LIN and np.linalg.norm(objects[n].ang_vel) <= ANG for n in BOXES) and let_go(objects)
     _trial["still"] = _trial["still"] + dt if still else 0.0
 
 
 def score(objects):
-    """Read at the end of the run; there's no early end. 0 for good if a bend passes 55 degrees, if the bends go the same way, or if the tube leaves
-    the bed. Otherwise, with both hands off it: 0.25 for one bend at 45 +/- 6 degrees; 0.5 for both; 0.75 with the ends parallel within 5 degrees and
+    """Read at the end of the run; there's no early end. 0 for good if a bend passes 55 degrees or if the bends go the same way. Otherwise, with both hands off it: 0.25 for one bend at 45 +/- 6 degrees; 0.5 for both; 0.75 with the ends parallel within 5 degrees and
     the offset 9.9 +/- 1 cm; 0.9 lying on the template; 1.0 with it at rest for the last 1 s."""
     if _trial["bad"] or not let_go(objects):
         return 0.0
