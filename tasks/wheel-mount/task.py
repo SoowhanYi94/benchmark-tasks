@@ -1,9 +1,9 @@
-"""On the station table: a bench grinder, unplugged, its wheel guard's front cover off and its spindle bare. The
-spindle (12 mm, along y, with a 2 mm deep flat along its top) sticks out from the grinder's right-hand side (-y)
-past a collar. In front of the grinder, a parts tray holds the mounting parts, each standing on edge facing along the
-spindle: a black inner flange (44 mm) with a D-shaped bore keyed to the spindle's flat, a bright steel outer flange
-(44 mm, round bore), two paper blotters (52 mm), a 100 mm grinding wheel and a second 100 mm wheel with a chip out of
-its rim and a crack running from it. The spindle nut, a flanged nut with a four-spoke handle, stands on a post in line
+"""On the station table: a 6 in bench grinder, unplugged, its wheel guard's front cover off and its spindle bare. The
+spindle (a 12.7 mm (1/2 in) arbor, along y, with a flat along its top) sticks out from the grinder's right-hand side
+(-y) past a collar. In front of the grinder, a parts tray holds the mounting parts, each standing on edge facing along
+the spindle: a black inner flange (50.8 mm, 2 in) with a D-shaped bore keyed to the spindle's flat, a bright steel
+outer flange (50.8 mm, round bore), two paper blotters (56 mm), a 152 x 19 mm (6 x 3/4 in) grinding wheel and a second
+one with a chip out of its rim and a crack running from it. The spindle nut, a flanged nut with a four-spoke handle, stands on a post in line
 with the spindle, 23.5 cm out. Front left of the grinder is the spindle lock's red push button: unpressed, the spindle
 turns with the nut.
 
@@ -11,7 +11,8 @@ The safe way (the standard for abrasive wheels): only an undamaged wheel; from t
 flange, a blotter, the wheel, a blotter, the outer flange, then the nut, run on (its top moving away from the arms,
 2.5 mm per turn) with the spindle locked, and tightened enough to drive the wheel but no more. The nut's free run
 before it seats is 1.81 mm; after it seats the blotters squeeze (30 N per mm) and the nut gets
-harder to turn. Turning the nut on 240 degrees or more past where it first seated cracks the wheel. With the stack complete, the nut
+harder to turn. Tightening it past the maker's maximum nut torque (20 lbf ft, 27 N m, scaled by 1/100 to 0.271 N m
+here, since the arm can't apply 27 N m) cracks the wheel. With the stack complete, the nut
 seated and both hands clear, the judge spins the spindle with the wheel braked (the wheel must turn with it, which
 only enough clamp force allows) and tugs the wheel 18 N along the spindle (it must not move 0.3 mm).
 
@@ -23,6 +24,7 @@ Needs the `yam_wheel` embodiment from this folder (`uv pip install -e . --no-dep
 """
 
 import math
+import os
 
 import numpy as np
 
@@ -66,9 +68,13 @@ ON_R = 0.003  # on the spindle: the part's centre within 3 mm of the spindle's a
 TILT_MAX = {"inner_flange": 5.0, "blotter_a": 8.0, "wheel": 5.0, "blotter_b": 8.0, "outer_flange": 5.0, "decoy": 90.0}
 SEATED = 0.0001  # the nut is seated: the stack has pushed its face back at least 0.1 mm (3 N of clamp force)
 DEG = F.PITCH / 360.0  # squeeze per degree turned past snug
-CRACK_TURN = math.radians(240)  # the nut turned on this far past where it first seated (squeezed the stack 0.1 mm)
-#                                  cracks the wheel (the yam_wheel embodiment latches it)
-HANDS_AXIS = 0.08  # each fingertip centre at least 8 cm from the spindle's axis (collar to nose end, nut included)
+LBF_FT = 1.35582  # N*m
+REAL_LIMIT = 20.0 * LBF_FT  # N*m: the maker's maximum safe torque on the nut of this 6 in grinder (27.1 N*m)
+SCALE = 100.0  # every torque in the simulation is the real one divided by this (the arm turns the nut with ~0.3 N*m)
+TORQUE_LIMIT = REAL_LIMIT / SCALE  # 0.271 N*m: turning the nut on with more torque than this cracks the wheel (the
+#                                    yam_wheel embodiment latches it; the torque is fixture.nut_hold at the clamp)
+HANDS_AXIS = 0.11  # each fingertip centre at least 11 cm from the spindle's axis (collar to nose end, nut included;
+#                    3.4 cm past the 6 in wheel's rim)
 HANDS_BUTTON = 0.05  # and at least 5 cm from the lock button's cap
 BUTTON_UP = 0.0005
 # the judge (the yam_wheel embodiment runs it while judge_ready holds)
@@ -237,9 +243,12 @@ def score(objects):
 # -- scripted demo -------------------------------------------------------------------------------------------------
 FINGER_PER_M = 0.04695 / 0.094
 COMFORT = {"left": -math.pi / 4, "right": math.pi / 4}
-GRIP_DEPTH = {"inner_flange": 0.000, "outer_flange": 0.000, "blotter_a": 0.003, "blotter_b": 0.003, "wheel": 0.015}
-BORE_DZ = {"inner_flange": 0.0005, "outer_flange": -0.0003, "blotter_a": -0.0003, "blotter_b": 0.0017,  # blotter_b's far slot: gripped 2 mm low
-           "wheel": 0.0042}  # (the heavy wheel sags about 4.2 mm in the grip)  # the part's centre this far above the axis while it slides on (mid-clearance)
+GRIP_DEPTH = {"inner_flange": 0.000, "outer_flange": 0.000, "blotter_a": 0.003, "blotter_b": 0.003, "wheel": 0.022}
+BORE_DZ = {"inner_flange": 0.0025, "outer_flange": 0.0015,  # the 87 g flanges sag about 2 mm
+           "blotter_a": -0.0003, "blotter_b": -0.0005,  # blotter_b's far slot: it rides high and out
+           "wheel": float(os.environ.get("WHEEL_SAG", "0.0138"))}  # (the 0.7 kg wheel sags in the grip)  # the part's centre this far above the axis while it slides on (mid-clearance)
+WHEEL_DX = float(os.environ.get("WHEEL_DX", "0.002"))  # the arm gives toward its base under the 0.7 kg wheel: aim
+#   the wheel this far out (x) while it goes onto the spindle
 GAP = 0.011  # parts the next one can't push home are let go this far short (the trailing finger clears the last)
 APPROACH = 0.008  # start sliding on with the part's leading face this far off the nose's end
 # The arm is soft: its push grows with how far it is short of its target (about 1.2 N at 3 mm), so a push has to aim well
@@ -247,7 +256,8 @@ APPROACH = 0.008  # start sliding on with the part's leading face this far off t
 PUSH_PAST = {"wheel": 0.012, "nut": 0.020}
 ARC_SPEED = math.radians(30)
 ARC_SETTLE = 0.6  # s held at the end of each arc (the arm lags its waypoints) before letting go
-TURN = F.RUN_DOWN / F.PITCH * 360 + 150  # degrees: the free run (1.81 mm) and 150 past snug
+TURN = F.RUN_DOWN / F.PITCH * 360 + float(os.environ.get("WHEEL_DEMO_PAST", "90"))  # degrees: the free run (1.81 mm)
+#   and this far past snug (WHEEL_DEMO_PAST sets it for the wrong-way runs: too far, or too little)
 TURN_OVER = 2.0  # the demo commands this times TURN: the fingers slip on the spoke, and each arc turns the nut about half as far
 HOVER = 0.02
 
@@ -299,26 +309,36 @@ def _place(plan, name):
             face -= GAP
         end_y = face - GAP - t / 2
     app_y = F.NOSE_Y - APPROACH - t / 2
-    plan.go("right", 1.4, _w((sx, sy, sz + up + 0.03)), ready, f"{name}: above it", 0.0)
+    dx = {"wheel": WHEEL_DX, "blotter_b": -0.0017}.get(name, 0.0)
+    if name == "wheel":  # beside it first, high: the fingertips sit ~12 mm under the TCP and the wheel stands 16 cm tall
+        plan.go("right", 1.4, _w((sx, sy + 0.045, sz + up + 0.05)), ready, f"{name}: beside it, high", 0.0)
+        plan.go("right", 0.6, _w((sx, sy, sz + up + 0.05)), label="above it")
+    else:
+        plan.go("right", 1.4, _w((sx, sy, sz + up + 0.03)), ready, f"{name}: above it", 0.0)
     plan.go("right", 0.2, label="settle")
     plan.go("right", 0.7, _w((sx, sy, sz + up)), label="descend")
     plan.go("right", 0.5, finger=grip, label="grip")
-    if name == "wheel":
-        plan.go("right", 0.8, _w((sx, sy, zc + up)), label="lift")
-        plan.go("right", 1.2, _w((sx, app_y, zc + up)), label="out along y")
-        plan.go("right", 1.2, _w((0.0, app_y, zc + up)), label="over to the spindle")
+    if name == "wheel":  # lifted clear of the tray's 22 mm dividers first
+        plan.go("right", 1.0, _w((sx, sy, zc + up + 0.020)), label="lift")
+        plan.go("right", 1.4, _w((sx, app_y, zc + up + 0.020)), label="out along y")
+        plan.go("right", 1.4, _w((dx, app_y, zc + up + 0.020)), label="over to the spindle")
+        plan.go("right", 0.8, _w((dx, app_y, zc + up)), label="down to the spindle's line")
     else:
         plan.go("right", 0.8, _w((sx, sy, zc + up + 0.010)), label="lift")
-        plan.go("right", 0.8, _w((0.0, sy, zc + up + 0.010)), label="over to the spindle's line")
-        plan.go("right", 1.8, _w((0.0, app_y, zc + up)), label="to the nose")  # 1.0 s left the far blotter 2.4 mm off axis
+        plan.go("right", 0.8, _w((dx, sy, zc + up + 0.010)), label="over to the spindle's line")
+        plan.go("right", 1.8, _w((dx, app_y, zc + up)), label="to the nose")  # 1.0 s left the far blotter 2.4 mm off axis
     plan.go("right", 0.7, label="settle")
-    plan.go("right", 1.4 if name == "wheel" else 1.0, _w((0.0, end_y, zc + up)), label="slide on")
+    plan.go("right", 1.4 if name == "wheel" else 1.0, _w((dx, end_y, zc + up)), label="slide on")
     if name == "wheel":  # ease off the push first, or the wound-up arm drags the wheel as it lets go, and runs late
-        end_y = F.HOME[name] - 0.004
-        plan.go("right", 0.8, _w((0.0, end_y, zc + up)), label="ease off")
+        end_y = F.HOME[name] + 0.003  # (still pushing a little: easing off further drags the wheel back)
+        plan.go("right", 0.8, _w((dx, end_y, zc + up)), label="ease off")
     plan.go("right", 0.5, label="settle")
     plan.go("right", 0.5 if name == "wheel" else 0.4, finger=_fingers(t, 0.03) if name == "wheel" else ready, label="let go")
-    plan.go("right", 0.9 if name == "wheel" else 0.5, _w((0.0, end_y, zc + up + 0.025)), label="up")
+    if name == "wheel":  # out sideways, the open fingers sliding clear along the wheel's faces: lifting them over the
+        #                 16 cm rim runs past the arm's reach, and moving along the spindle drags the wheel
+        plan.go("right", 1.2, _w((dx - 0.10, F.HOME[name], zc + up + 0.010)), label="out sideways along its faces")
+    else:
+        plan.go("right", 0.5, _w((dx, end_y, zc + up + 0.025)), label="up")
     if name == "wheel":
         plan.go("right", 0.6, label="let the arm catch up")
 

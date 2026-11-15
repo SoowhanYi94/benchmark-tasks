@@ -22,9 +22,10 @@ Mechanism rules (wheel_mount.fixture has the geometry):
   bearings unless the lock button is pressed down PRESSED or more.
 - Tightening: the torque it takes to turn the nut on is its free-run drag plus a term in the clamp force (the crush
   spring's force; fixture.nut_hold), updated each step.
-- Overtightening: the nut's turn is recorded when it first seats (the crush reaches the task's SEATED); once it has
-  turned on the task's CRACK_TURN (240 degrees) past that, the wheel is cracked for the trial (latched; only a reset
-  clears it). (The rigid stack yields by contact at high load, so the crush alone stops rising near 1 mm.)
+- Overtightening: whenever the nut turns on (TURNING_ON past the furthest it has been) while the torque it takes to
+  turn it (fixture.nut_hold at the present clamp) is over the task's TORQUE_LIMIT (the maker's 20 lbf ft scaled by the
+  task's SCALE), the wheel is cracked for the trial (latched: backing off doesn't clear it; only a reset does). A clamp
+  force raised without turning the nut (the judge's tug) is not tightening and doesn't count.
 - The judge: while the task's `judge_ready(objects)` holds (the stack complete, the nut seated, hands clear), the
   spindle is driven (SPIN_T against a SPIN_D damper) with the wheel held back by a brake (BRAKE, ramped in over the wheel's first BRAKE_RAMP of turn) for SPIN_S; only the stack's
   friction, set by the clamp force, drives the wheel, so a loose nut lets it slip: if it slips on the spindle more
@@ -43,6 +44,7 @@ from . import fixture as F
 DEBUG = os.environ.get("WHEEL_DEBUG") == "1"
 PLACEHOLDERS = ("grinder_frame", "grinder_mech")
 PART_NAMES = tuple(F.PARTS)
+TURNING_ON = math.radians(0.5)  # the nut counts as turning on once it is this far past the furthest it has turned
 
 
 def _place(stage, prim_path, translation, orientation):
@@ -101,6 +103,7 @@ class WheelEmbodiment(YamArenaEmbodiment):
         self._wall_q = F.SNUG_Y - F.RUN_DOWN - F.NUT_STAND_Y
         self._engaged = self._cracked = self._decoy = False
         self._seat_turn = None  # a new trial: the harness resets here, which a robot can't do
+        self._max_turn, self._peak = 0.0, 0.0
         self._spindle = None
         self._judge = {"phase": 0}
         self._wrench = None
@@ -193,10 +196,17 @@ class WheelEmbodiment(YamArenaEmbodiment):
                 self._seat_turn = self._q("nut_turn")
                 if DEBUG:
                     print(f"SEATED t={self._t:5.2f} at turn {math.degrees(self._seat_turn):.1f} deg", flush=True)
-            if self._seat_turn is not None and self._q("nut_turn") - self._seat_turn >= m.CRACK_TURN:
-                if DEBUG and not self._cracked:
-                    print(f"CRACKED t={self._t:5.2f}", flush=True)
-                self._cracked = True
+            if self._engaged and self._q("nut_turn") > self._max_turn + TURNING_ON:  # the nut is turning on
+                self._max_turn = self._q("nut_turn")
+                torque = F.nut_hold(-self._q("nut_crush"))
+                if DEBUG and int(torque * 100) > int(self._peak * 100):
+                    print(f"TORQUE t={self._t:5.2f} turning on at {torque:.3f} N m (limit {m.TORQUE_LIMIT:.3f})",
+                          flush=True)
+                self._peak = max(self._peak, torque)
+                if torque > m.TORQUE_LIMIT:
+                    if DEBUG and not self._cracked:
+                        print(f"CRACKED t={self._t:5.2f} at {torque:.3f} N m", flush=True)
+                    self._cracked = True
             self._run_judge(st, m)
         return super().step(action)
 
@@ -214,7 +224,8 @@ class WheelEmbodiment(YamArenaEmbodiment):
             j.update(phase=1, t=0.0, s0=self._q("spindle_turn"), w0=w_angle, slip=0.0, move=0.0)
             self._set_spindle("test")
             if DEBUG:
-                print(f"JUDGE t={self._t:5.2f} start, crush {-1000 * self._q('nut_crush'):.3f} mm", flush=True)
+                print(f"JUDGE t={self._t:5.2f} start, crush {-1000 * self._q('nut_crush'):.3f} mm, peak tightening torque "
+                      f"{self._peak:.3f} N m (limit {m.TORQUE_LIMIT:.3f})", flush=True)
         if j["phase"] == 1:
             j["t"] += dt
             j["slip"] = (w_angle - j["w0"]) - (self._q("spindle_turn") - j["s0"])

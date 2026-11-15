@@ -172,12 +172,14 @@ def judge(tag):
     ok_s, ok_t = slip <= T.SLIP_MAX, move < T.TUG_MOVE
     print(f"JUDGE [{tag}] crush {1000 * c0:.3f} -> {-1000 * q('nut_crush'):.3f} mm | spin {math.degrees(spun):+.1f} deg"
           f" slip {math.degrees(slip):.2f} deg {'ok' if ok_s else 'SLIPPED'} | tug moved {1000 * move:+.3f} mm "
-          f"{'ok' if ok_t else 'MOVED'} | hold {F.nut_hold(c0):.3f} N*m", flush=True)
+          f"{'ok' if ok_t else 'MOVED'} | hold {F.nut_hold(c0):.3f} N*m ({'OVER' if F.nut_hold(c0) > T.TORQUE_LIMIT else 'under'}"
+          f" the {T.TORQUE_LIMIT:.3f} N*m limit)", flush=True)
     F.lock_here(mech, "spindle_turn", LS)
 
 
 SNUG_DEG = F.RUN_DOWN / F.PITCH * 360
-for past in (30, 50, 70, 120, 230):
+import os  # noqa: E402
+for past in [int(v) for v in os.environ.get("MECH_PASTS", "10,20,30,40,60,80,120,200").split(",")]:
     turn_to(SNUG_DEG + past)
     report(f"turned {past} past snug")
     judge(f"{past} deg past snug")

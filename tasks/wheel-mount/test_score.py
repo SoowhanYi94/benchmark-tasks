@@ -189,8 +189,8 @@ def test_a_passed_judge_needs_judge_ready_still():
 
 @pytest.mark.parametrize("hand", [
     (t.X0, t.Y0 - 0.05, t.TOP + F.ZA + 0.06),  # on a spoke
-    (t.X0 - 0.05, t.Y0 - 0.02, t.TOP + F.ZA + 0.05),  # at the wheel's top
-    (t.X0, t.Y0 - 0.06, t.TOP + F.ZA + 0.079),  # just inside 8 cm of the nose
+    (t.X0 - 0.07, t.Y0 - 0.02, t.TOP + F.ZA + 0.0714),  # 2.4 cm past the wheel's rim
+    (t.X0, t.Y0 - 0.06, t.TOP + F.ZA + 0.109),  # just inside 11 cm of the nose
 ])
 def test_hand_on_the_stack_or_nut(hand):
     w = world(hands=(FAR[0], hand))
@@ -208,8 +208,8 @@ def test_button_held_down_without_a_hand_blocks_the_test():
     assert not t.judge_ready(w) and t.score(w) == pytest.approx(0.6)
 
 
-def test_hands_8_cm_out_are_clear():
-    w = world(hands=(FAR[0], (t.X0, t.Y0 - 0.03, t.TOP + F.ZA + 0.081)))
+def test_hands_11_cm_out_are_clear():
+    w = world(hands=(FAR[0], (t.X0, t.Y0 - 0.03, t.TOP + F.ZA + 0.111)))
     assert t.hands_clear(w) and t.score(w) == pytest.approx(1.0)
 
 
@@ -243,7 +243,7 @@ def test_inner_flange_keys_only_with_its_flat_on_the_spindle_flat():
         return False
 
     assert fits(0) and fits(5) and fits(-5)  # slides on lined up (and a little off)
-    for deg in (90, -90):  # turned sideways, the spindle's 12 mm doesn't fit under the 11.9 mm D
+    for deg in (90, -90):  # turned sideways, the arbor's 12.7 mm doesn't fit under the 11.9 mm D
         assert not fits(deg)
     # the D bore's segments clear the spindle when lined up: every inner vertex outside the spindle's section
     for seg in F.ring_segments("inner_flange"):
@@ -266,11 +266,20 @@ def test_nut_gets_harder_to_turn_as_it_squeezes_the_stack():
     free = F.nut_hold(0.0)
     assert F.nut_hold(-0.001) == free
     assert F.nut_hold(60 * t.DEG) > 1.7 * free and F.nut_hold(120 * t.DEG) > 2.5 * free
-    assert F.nut_hold(240 * t.DEG) < 0.6  # still within a hand's turn on the spoke
+    assert F.nut_hold(240 * t.DEG) < 0.6  # 240 degrees past snug: still within a hand's turn on the spoke
 
 
-def test_crack_leaves_room_past_the_demo():
-    assert t.TURN - F.RUN_DOWN / F.PITCH * 360 < math.degrees(t.CRACK_TURN) - 60
+def test_torque_limit_is_the_makers_20_lbf_ft_scaled():
+    assert t.REAL_LIMIT == pytest.approx(27.12, abs=0.01) and t.TORQUE_LIMIT == pytest.approx(t.REAL_LIMIT / t.SCALE)
+    assert t.BRAKE * t.SCALE == pytest.approx(10.0)  # the spin's brake on real arms, N*m
+
+
+def test_torque_window_is_open():
+    # dev/mech_check.py: the spin and tug first pass at about 0.37 mm of squeeze; the limit must sit well above that,
+    # and an over-tightened nut (1 mm, which the stack reaches) well above the limit
+    assert F.nut_hold(0.00037) < t.TORQUE_LIMIT - 0.05
+    assert F.nut_hold(0.001) > t.TORQUE_LIMIT + 0.08
+    assert F.nut_hold(0.00063) == pytest.approx(t.TORQUE_LIMIT, abs=0.002)  # the limit at 0.63 mm (19 N of clamp)
 
 
 def test_decoy_has_its_chip_and_no_tag():

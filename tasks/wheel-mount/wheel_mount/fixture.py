@@ -9,7 +9,7 @@ pointing to -y (the grinder's right-hand side, seen from the arms).
 - The frame (one kinematic body): base, motor housing, the guard's back plate, the spindle-lock button's pedestal,
   the parts tray (rails and dividers) and the nut's stand.
 - The mechanism (one articulation, self-collision off): anchor (fixed to the world) ->
-    spindle_turn (revolute, y) -> spindle: the collar and the bare spindle (a 12 mm shaft with a flat on top, solid);
+    spindle_turn (revolute, y) -> spindle: the collar and the bare spindle (a 12.7 mm shaft with a flat on top, solid);
       -> nut_px, nut_pz, nut_py (prismatic x, z, y; free) -> nut_turn (revolute, y) -> nut_thread (prismatic, y, a
          mimic of nut_turn: PITCH per turn) -> nut (hex, hub and four spokes) -> nut_crush (prismatic, y, a stiff
          spring) -> nut_face (the nut's washer face, which presses on the stack).
@@ -34,16 +34,17 @@ import numpy as np
 
 # -- spindle (fixture frame) -----------------------------------------------------------------------------------------
 ZA = 0.085  # the spindle's axis height above the table
-SPINDLE_R = 0.006  # 12 mm spindle
-FLAT_Z = 0.0040  # its flat, on top, 2 mm deep
+SPINDLE_R = 0.00635  # 12.7 mm (1/2 in) arbor
+FLAT_Z = 0.0040  # its flat, on top, 4 mm above the axis (2.35 mm deep)
 NOSE_Y = -0.060  # the nose's end
 COLLAR_R, COLLAR_Y = 0.011, (0.0, 0.010)  # the shoulder the stack is clamped against (its face at y = 0)
+CHAMFER = (0.002, 0.8)  # the nose's lead-in: over its last 2 mm the arbor narrows to 0.8 of its section
 SHAFT_IN = 0.025  # the spindle runs on into the motor housing (look only past the collar)
 
 # -- grinder body (frame) -------------------------------------------------------------------------------------------
 MOTOR_R, MOTOR_Y = 0.055, (0.025, 0.145)
 BASE = ((-0.065, 0.015, 0.0), (0.065, 0.160, 0.032))
-GUARD_R, GUARD_Y = 0.068, (0.012, 0.015)  # the guard's back plate; its front cover is off
+GUARD_R, GUARD_Y = 0.080, (0.012, 0.015)  # the guard's back plate; its front cover is off
 BUTTON_XY = (-0.100, 0.120)  # the spindle lock's push button
 BUTTON_R, BUTTON_H = 0.010, 0.012
 BUTTON_Z0 = 0.040  # its pedestal's top; the cap stands BUTTON_Z0..BUTTON_Z0 + BUTTON_H when up
@@ -54,20 +55,20 @@ PEDESTAL = ((BUTTON_XY[0] - 0.014, BUTTON_XY[1] - 0.014, 0.0),  # its top 5 mm u
 BRACKET = ((BUTTON_XY[0] - 0.006, BUTTON_XY[1] - 0.010, 0.0), (BASE[0][0], BUTTON_XY[1] + 0.010, 0.008))
 
 # -- the loose parts (each part's frame: its centre, its axis along y) ---------------------------------------------
-BORE_R = 0.0075  # 15 mm bores on a 12 mm spindle
-D_CHORD = 0.0044  # the inner flange's D bore: its flat 4.4 mm above the bore's centre, 11.9 mm across, under the spindle's 12 mm (keyed: it slides on only
+BORE_R = 0.0075  # 15 mm bores on the 12.7 mm arbor (a 1/2 in bore, opened 2.3 mm so the parts slide on in simulation)
+D_CHORD = 0.0044  # the inner flange's D bore: its flat 4.4 mm above the bore's centre, 11.9 mm across, under the arbor's 12.7 mm (keyed: it slides on only
 #                    with its flat lined up with the spindle's, and then turns with the spindle)
 PARTS = {  # name: outer radius, thickness, bore ("D" or "round"), mass (kg), look, physics material
-    "inner_flange": (0.022, 0.006, "D", 0.060, "oxide", "steel"),
-    "blotter_a": (0.026, 0.002, "round", 0.020, "paper", "paper"),
-    "wheel": (0.050, 0.013, "round", 0.230, "wheel", "abrasive"),
-    "blotter_b": (0.026, 0.002, "round", 0.020, "paper", "paper"),
-    "outer_flange": (0.022, 0.006, "round", 0.060, "steel", "steel"),
-    "decoy": (0.050, 0.013, "round", 0.226, "wheel", "abrasive"),
+    "inner_flange": (0.0254, 0.006, "D", 0.087, "oxide", "steel"),  # 2 in (50.8 mm) flanges, 1/3 of the wheel
+    "blotter_a": (0.028, 0.002, "round", 0.020, "paper", "paper"),  # 56 mm (our size: the manual gives none)
+    "wheel": (0.076, 0.019, "round", 0.700, "wheel", "abrasive"),  # 6 x 3/4 in; 0.70 kg is our estimate
+    "blotter_b": (0.028, 0.002, "round", 0.020, "paper", "paper"),  # (345 cm3 of vitrified abrasive at ~2.0 g/cm3)
+    "outer_flange": (0.0254, 0.006, "round", 0.087, "steel", "steel"),
+    "decoy": (0.076, 0.019, "round", 0.690, "wheel", "abrasive"),
 }
 ORDER = ("inner_flange", "blotter_a", "wheel", "blotter_b", "outer_flange")  # from the collar out
 SEGMENTS = {"inner_flange": 22, "blotter_a": 18, "wheel": 24, "blotter_b": 18, "outer_flange": 22, "decoy": 24}
-CHIP = (5, 0.034)  # the damaged wheel: its segment 5 (75 to 90 degrees from +x toward +z) chipped to a 34 mm radius
+CHIP = (5, 0.056)  # the damaged wheel: its segment 5 (75 to 90 degrees from +x toward +z) chipped to a 56 mm radius
 
 
 def _homes():
@@ -82,7 +83,7 @@ def _homes():
 HOME, SNUG_Y = _homes()  # each part's centre y once the stack is home; the stack's outer face (the nut's seat)
 
 # -- the nut (nut frame: origin on the axis in the face's plane at zero crush; the nut extends to -y) ---------------
-PITCH = 0.0025  # m per turn (an M12 fine thread is 1.25 mm; doubled)
+PITCH = 0.0025  # m per turn (our value: the grinder's manual doesn't give the arbor's thread)
 COEF = PITCH / 360.0  # mimic: q_thread = COEF * q_turn, the revolute leader read in degrees
 RUN_DOWN = 0.00181  # the thread's free run before the nut seats: 1.81 mm (261 degrees)
 WALL_Y = SNUG_Y - RUN_DOWN  # the nut's face at the thread's start
@@ -90,7 +91,7 @@ THREAD_LEN = 0.012  # the thread runs on 12 mm (it bottoms there)
 FACE_R, FACE_T = 0.012, 0.003  # the washer face, 24 mm
 HEX_AF, HEX_L = 0.019, 0.016  # 19 mm across flats, 16 mm long
 HUB_R, HUB_L = 0.009, 0.007
-SPOKE_Y = -(FACE_T + HEX_L + 0.003)  # the spokes' plane (22 mm out from the face)
+SPOKE_Y = -(FACE_T + HEX_L + 0.011)  # the spokes' plane (30 mm out from the face, so the fingers clear the 6 in wheel)
 SPOKES, SPOKE_R, SPOKE_TIP = 4, 0.004, 0.065
 SPOKE_PHASE = math.radians(45.0)  # a spoke at 45 degrees from +x toward +z, then every 90
 GRIP_R = 0.056  # where the demo grips a spoke (from the axis)
@@ -115,7 +116,7 @@ PART_ITERS = 128  # solver position iterations for the loose parts (a stack of f
 RAIL_R, RAIL_A, RAIL_Z = 0.003, 0.015, 0.010  # two rails along y under each row, at the slot's x +- RAIL_A
 TRAY_T = 0.007
 DIVIDER_H = 0.022  # dividers stand to this height, 2 mm thick, either side of each part
-ROWS = {"small": -0.060, "wheels": -0.140}
+ROWS = {"small": -0.060, "wheels": -0.175}
 SLOTS = {"outer_flange": ("small", -0.110), "blotter_a": ("small", -0.142), "inner_flange": ("small", -0.174),
          "blotter_b": ("small", -0.206), "wheel": ("wheels", -0.115), "decoy": ("wheels", -0.165)}
 TRAY_Y = (-0.225, -0.090)
@@ -417,8 +418,12 @@ def build_mech(stage, path, world_origin, world_rot=None):
     s = f"{path}/spindle"
     _ycyl(b, f"{s}/collar", COLLAR_R, *COLLAR_Y, "steel", collide=True)
     sec = spindle_section()
-    pts = [(x, NOSE_Y, ZA + z) for x, z in sec] + [(x, COLLAR_Y[1], ZA + z) for x, z in sec]
+    y_ch = NOSE_Y + CHAMFER[0]
+    pts = [(x, y_ch, ZA + z) for x, z in sec] + [(x, COLLAR_Y[1], ZA + z) for x, z in sec]
     b.hull(f"{s}/shaft", pts, "steel", mat="steel")
+    k = CHAMFER[1]  # the nose's lead-in chamfer
+    pts = [(k * x, NOSE_Y, ZA + k * z) for x, z in sec] + [(x, y_ch, ZA + z) for x, z in sec]
+    b.hull(f"{s}/nose", pts, "steel", mat="steel")
     b.cube(f"{s}/mark", ((-0.0012, NOSE_Y - 0.0004, ZA - 0.004), (0.0012, NOSE_Y + 0.0004, ZA + 0.004)), "red",
            collide=False)  # a red line on the nose's end (shows the spindle turning)
     # the lock button's cap
@@ -434,7 +439,7 @@ def build_mech(stage, path, world_origin, world_rot=None):
         hex_pts.append((r * math.cos(a), ZA + r * math.sin(a)))
     pts = [(x, y0 - FACE_T - HEX_L, z) for x, z in hex_pts] + [(x, y0 - FACE_T, z) for x, z in hex_pts]
     b.hull(f"{n}/hex", pts, "nut", mat="steel")
-    _ycyl(b, f"{n}/hub", HUB_R, y0 + SPOKE_Y - HUB_L / 2, y0 + SPOKE_Y + HUB_L / 2, "dark", collide=True)
+    _ycyl(b, f"{n}/hub", HUB_R, y0 + SPOKE_Y - HUB_L / 2, y0 - FACE_T - HEX_L + 0.001, "dark", collide=True)
     for k, phi in enumerate(spoke_angles(0.0)):
         _spoke(b, f"{n}/spoke_{k}", phi, y0 + SPOKE_Y)
     _ycyl(b, f"{path}/nut_face/face", FACE_R, y0 - FACE_T, y0, "nut", collide=True, mat="steel")
@@ -517,7 +522,7 @@ def build_part(stage, path, name):
         a0, a1 = segment_angles(SEGMENTS[name])[CHIP[0]]
         a = (a0 + a1) / 2
         for side, s in (("l", 1), ("r", -1)):  # a crack from the chip toward the bore, on both faces
-            c = b.cube(f"{path}/crack_{side}", ((-0.0006, s * (t / 2 + 0.0001) - 0.0003, 0.010),
+            c = b.cube(f"{path}/crack_{side}", ((-0.0006, s * (t / 2 + 0.0001) - 0.0003, 0.016),
                                                 (0.0006, s * (t / 2 + 0.0001) + 0.0003, CHIP[1])), "crack",
                        collide=False)
             _turn_about_y(c, a - math.pi / 2)
