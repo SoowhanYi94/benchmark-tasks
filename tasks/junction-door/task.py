@@ -363,8 +363,8 @@ class Tracker:
                 self.test_clip_lost = True
             if not m["hands"]:
                 self.test_hands = True
-            if dt > TEST_T["hold"] and m["door"] < NEAR_SHUT_DEG and m["outside"]:
-                self.test_pinched = True
+            if m["door"] < NEAR_SHUT_DEG and m["outside"]:  # trapped in the seam: zero, not a failed test
+                self.test_pinched = self.pinched = True
             if dt <= TEST_T["hold"] and self.test_max_open >= TEST_OPEN_DEG and not (
                     self.test_unseated or self.test_clip_lost or self.test_hands):
                 self.opened_ok = True

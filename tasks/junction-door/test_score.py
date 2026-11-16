@@ -132,7 +132,20 @@ def test_cord_pulled_out_of_the_clip_in_the_door_test():
 def test_loop_trapped_when_the_test_shuts_the_door():
     tr = finished_robot_phase()
     run(tr, [(0.4, DONE), (2.5, dict(DONE, door=120.0)), (2.0, dict(DONE, door=5.0, outside=True)), (3.0, DONE)])
-    assert tr.score() == 0.8 and not tr.success()
+    assert tr.score() == 0.0 and not tr.success()
+
+
+def test_loop_trapped_while_the_test_opens_the_door_is_zero():
+    tr = finished_robot_phase()
+    run(tr, [(0.4, DONE), (0.2, dict(DONE, door=5.0, outside=True)), (2.5, dict(DONE, door=120.0)), (5.0, DONE)])
+    assert tr.score() == 0.0 and not tr.success()
+
+
+def test_trapped_cord_and_plug_pulled_in_the_same_door_test_is_zero():
+    tr = finished_robot_phase()
+    run(tr, [(0.4, DONE), (2.5, dict(DONE, door=120.0)),
+             (2.0, dict(DONE, door=5.0, outside=True, depth=0.004)), (3.0, dict(DONE, depth=0.004))])
+    assert tr.test_unseated and tr.score() == 0.0
 
 
 def test_cord_across_the_rim_when_the_robot_shuts_the_door_is_zero_for_good():
