@@ -45,6 +45,7 @@ RED = (0.95, 0.08, 0.06)
 GREEN = (0.10, 0.60, 0.25)
 CORD = (0.08, 0.08, 0.08)
 BLUE = (0.15, 0.35, 0.85)
+NATURAL = (0.93, 0.91, 0.84)  # natural (unpigmented) PA66: the cable clip
 
 # -- geometry (world frame: x forward, y left, z up, m) -----------------------------------------------------------
 X0, X1 = 0.17, 0.37  # box outside, along the hinge (200 mm)
@@ -72,10 +73,20 @@ SOCK_Z = TOP + 0.013  # cavity centre height
 CAV_W, CAV_H, CAV_D = 0.019, 0.015, 0.016  # cavity: width (y) x height (z) x depth (x)
 PL, PW, PH = 0.044, 0.015, 0.012  # plug body with its strain-relief boot: length (along the cord) x width x height
 SEATED_MIN = 0.012  # m: seated when the plug's tip is at least 12 mm inside (16 mm is home)
-CLIP_X0, CLIP_X1 = 0.260, 0.276  # the clip's length along x
+# cable clip: HellermannTyton RB5-PA66-NA (151-14059), an adhesive snap-in clip; maker's dimensions L 19.0, W 19.0,
+# W2 9.7, H 6.0 mm, cable up to 5.0 mm. Our own (not published): base 1 mm with its adhesive pad, two arms 2.1 mm
+# thick (W2 9.7 = 2 x 2.1 + a 5.5 mm channel), one arm's flex modelled as a sprung jaw with the snap lip.
+CLIP_L, CLIP_W, CLIP_W2, CLIP_H = 0.019, 0.019, 0.0097, 0.006
+CLIP_XC = 0.268  # centre along x: unchanged from the earlier 16 mm clip, so the cord's slack across the hinge stays
+CLIP_X0, CLIP_X1 = CLIP_XC - CLIP_L / 2, CLIP_XC + CLIP_L / 2  # the clip's length along x (the cord runs along x)
 CLIP_Y = SOCK_Y + 0.0015  # where the cord naturally runs from the plug toward the hinge
-CLIP_FLOOR = TOP + 0.004  # channel floor
-CLIP_TOP = CLIP_FLOOR + 0.004  # walls 4 mm: a seated 5 mm cord stands 1 mm proud, so a fingertip can press it home
+CLIP_BASE = 0.001  # base with its adhesive pad (ours)
+CLIP_FLOOR = TOP + T + CLIP_BASE  # channel floor
+CLIP_TOP = TOP + T + CLIP_H  # arm tops: a seated 5 mm cord lies flush with them
+CLIP_GAP = 0.0055  # between the arms (ours)
+CLIP_ARM = (CLIP_W2 - CLIP_GAP) / 2  # 2.1 mm
+LIP_Z = 0.0039  # the lip's edge above the floor (ours): above the seated cord's centre (2.5 mm)
+LIP_IN = 0.00145  # how far the lip's edge reaches into the channel (ours): entry 4.05 mm for a 5 mm cord
 SOCK_TOP = TOP + 0.023
 CORD_R = 0.0025
 CORD_LEN = 0.30
@@ -153,12 +164,12 @@ def _jbox() -> Body:
         _box(_local((sx - 0.0005, sy, SOCK_TOP + 0.0005)), (0.002, 0.020, 0.001), GREEN, collide=False),  # marking
     ]
     _ = blk_len
-    # spring cable clip: base, fixed -y wall (the spring jaw on +y is its own body)
+    # cable clip (RB5): 19 x 19 base on its adhesive pad, the fixed -y arm (the sprung +y arm is its own body)
     cx, cl = (CLIP_X0 + CLIP_X1) / 2, CLIP_X1 - CLIP_X0
     shapes += [
-        _box(_local((cx, CLIP_Y + 0.001, (TOP + T + CLIP_FLOOR) / 2)), (cl, 0.013, CLIP_FLOOR - TOP - T), BLUE),
-        _box(_local((cx, CLIP_Y - 0.004, (CLIP_FLOOR + CLIP_TOP) / 2)), (cl, 0.003, CLIP_TOP - CLIP_FLOOR), BLUE),
-        _box(_local((cx, CLIP_Y + 0.0085, (CLIP_FLOOR + CLIP_TOP) / 2)), (cl, 0.002, CLIP_TOP - CLIP_FLOOR), BLUE),
+        _box(_local((cx, CLIP_Y, (TOP + T + CLIP_FLOOR) / 2)), (cl, CLIP_W, CLIP_BASE), NATURAL),
+        _box(_local((cx, CLIP_Y - (CLIP_GAP + CLIP_ARM) / 2, (CLIP_FLOOR + CLIP_TOP) / 2)),
+             (cl, CLIP_ARM, CLIP_TOP - CLIP_FLOOR), NATURAL),
     ]
     return Body.build("jbox", pos=(XC, YC, TOP), mass=2.0, shapes=shapes, kinematic=True, friction=(0.5, 0.45))
 
@@ -210,12 +221,14 @@ def _pad() -> Body:
 
 def _jaw() -> Body:
     cx = (CLIP_X0 + CLIP_X1) / 2
-    p = (cx, CLIP_Y + 0.003, (CLIP_FLOOR + CLIP_TOP) / 2 + 0.00025)  # inner face 1.5 mm left of the channel centre
+    hz = CLIP_TOP - CLIP_FLOOR - 0.0005  # the arm stands 0.5 mm clear of the floor (it flexes, in the sim it slides)
+    p = (cx, CLIP_Y + CLIP_GAP / 2, CLIP_TOP - hz / 2)  # body origin: on the arm's inner face, mid-height
+    side = 0.0015  # lip: a square bar turned 45 deg; its inner edge LIP_IN into the channel at LIP_Z above the floor
+    lip_y = -LIP_IN + side / math.sqrt(2)
     shapes = [
-        _box((0, 0.0015, 0), (CLIP_X1 - CLIP_X0 - 0.001, 0.003, CLIP_TOP - CLIP_FLOOR - 0.0005), BLUE),
-        # the jaw's lip: a 45 deg ridge whose edge sits 4.3 mm up (the cord's top half), 1.2 mm into the cord's path:
-        # a cord pressed down spreads it and snaps under it; pulled up, it has to spread the jaw again
-        _diamond((0, -0.00022, 0.00205), CLIP_X1 - CLIP_X0 - 0.001, 0.0021, BLUE),
+        _box((0, CLIP_ARM / 2, 0), (CLIP_X1 - CLIP_X0 - 0.001, CLIP_ARM, hz), NATURAL),
+        # a cord pressed down spreads the arm and snaps under the lip; pulled up, it has to spread the arm again
+        _diamond((0, lip_y, CLIP_FLOOR + LIP_Z - p[2]), CLIP_X1 - CLIP_X0 - 0.001, side, NATURAL),
     ]
     return Body.build("clip_jaw", pos=p, mass=0.002, shapes=shapes, ignore=("jbox",), friction=(0.15, 0.15), slick=True,
                       solver_iterations=32)
@@ -289,7 +302,7 @@ def in_clip(points: np.ndarray) -> bool:
     if m.sum() < 2:
         return False
     q = points[m]
-    return bool((np.abs(q[:, 1] - CLIP_Y) <= 0.003).all() and (q[:, 2] <= CLIP_FLOOR + 0.0045).all())
+    return bool((np.abs(q[:, 1] - CLIP_Y) <= 0.003).all() and (q[:, 2] <= CLIP_FLOOR + LIP_Z).all())
 
 
 def outside_box(points: np.ndarray) -> bool:
@@ -395,10 +408,15 @@ class Tracker:
     def passed(self) -> bool:
         return self.opened_ok and not (self.test_unseated or self.test_clip_lost or self.test_pinched or self.test_hands)
 
+    def final_still(self) -> bool:
+        """After the door test: re-latched with the plug seated, the cord clipped, hands clear and everything still,
+        held for the last STILL_S (1 s) without a break."""
+        return self.final_ok_since is not None and self.t - self.final_ok_since >= STILL_S - 1e-9
+
     def score(self) -> float:
         """0.2 plug seated; 0.4 and the cord in the clip; 0.6 and the door latched (the door test starts once this has
         held still for 1 s); 0.8 the test swung the door to its stop with the plug seated and the cord clipped; 1.0 it
-        shut and latched it again with nothing trapped, all still. Every rung needs both hands clear of the box.
+        shut and latched it again with nothing trapped, all still for 1 s after the test (0.8 until then). Every rung needs both hands clear of the box.
         0 if the cord was ever across the rim with the door within 8 deg of shut, or the door came that close before
         the plug was first seated; at most 0.2 once the plug has come out after being seated and before the door test
         began. A plug pulled out during the door test fails the test (0.6, or 0.8 after the door reached 115 deg)."""
@@ -408,7 +426,7 @@ class Tracker:
         if self.phase != "robot":  # the robot's work was complete and held still for 1 s: the door test decides
             if not self.opened_ok:
                 return 0.6
-            if self.phase == "done" and self.passed() and self.work_done(m) and m["hands"]:
+            if self.phase == "done" and self.final_still():  # re-latched, nothing trapped, all still for 1 s
                 return 1.0
             return 0.8
         if not m["hands"]:
@@ -425,7 +443,7 @@ class Tracker:
         return s
 
     def success(self) -> bool:
-        return self.phase == "done" and self.final_ok_since is not None and self.score() == 1.0
+        return self.phase == "done" and self.score() == 1.0
 
 
 # -- glue to the simulator ---------------------------------------------------------------------------------------
@@ -647,7 +665,7 @@ def demo_plan() -> dict:
         ]
         _live("right", right, "line the plug up with the socket", "align", follow=5)
         _live("right", right, "push the plug in", "push", follow=3)
-        cx = CLIP_X0 - 0.0155  # grip the cord just beside the clip, on the hinge-loop side
+        cx = 0.2445  # grip the cord 5 mm beside the clip, on the hinge-loop side
         if DEMO != "loose":
             right += [
                 _w(1.2, (cx, CLIP_Y - 0.0015, TOP + 0.06), -0.018, "over the cord beside the clip"),
@@ -657,7 +675,7 @@ def demo_plan() -> dict:
             right += [_w(0.5, (cx, CLIP_Y, TOP + 0.016), -0.012, "let go"),
                       _w(0.8, (cx, CLIP_Y, TOP + 0.04), -0.012, "up")]
             mid = (CLIP_X0 + CLIP_X1) / 2
-            zp = CLIP_TOP + 0.001 + 0.0128 - 0.016  # aim 16 mm below the seated cord top: the arm is soft (~0.4 N/mm)
+            zp = CLIP_TOP + 0.001 + 0.0128 - 0.016  # aim 17 mm below the seated cord top: the arm is soft (~0.4 N/mm)
             q = math.pi / 2  # fingers across the cord: the 13 mm-thick pair fits between the clip's ends
             right += [
                 _w(0.8, (mid, CLIP_Y, TOP + 0.04), FINGER_SHUT, "over the clip", q),

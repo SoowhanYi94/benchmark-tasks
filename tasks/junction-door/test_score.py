@@ -47,6 +47,17 @@ def finished_robot_phase():
 
 def passed_door_test(tr):
     run(tr, [(0.4, DONE), (2.5, dict(DONE, door=120.0)), (2.0, dict(DONE, door=60.0)), (3.0, DONE)])
+    assert tr.phase == "done"
+    run(tr, [(1.1, DONE)])  # the final one still second after the test
+    return tr
+
+
+def through_door_test(tr):
+    """The door test passes; stops the moment the test's timeline ends (phase done, no still time yet)."""
+    while tr.phase != "done":
+        dt = tr.t - tr.t_test
+        door = 120.0 if 0.4 <= dt < 3.4 else 60.0 if 3.4 <= dt < 5.0 else 0.0
+        tr.update(m(t=tr.t + DT, **dict(DONE, door=door)))
     return tr
 
 
@@ -107,6 +118,41 @@ def test_opened_to_the_stop_scores_08():
 def test_full_score_and_success():
     tr = passed_door_test(finished_robot_phase())
     assert tr.phase == "done" and tr.score() == 1.0 and tr.success()
+
+
+# -- the final one-second stillness after the door test (review #3) ---------------------------------------------------
+def test_no_full_score_the_moment_the_test_ends():
+    tr = through_door_test(finished_robot_phase())
+    assert tr.phase == "done" and tr.score() == 0.8 and not tr.success()
+
+
+def test_full_score_only_after_one_still_second():
+    tr = through_door_test(finished_robot_phase())
+    run(tr, [(0.9, DONE)])
+    assert tr.score() == 0.8 and not tr.success()
+    run(tr, [(0.15, DONE)])
+    assert tr.score() == 1.0 and tr.success()
+
+
+def test_still_moving_after_the_test_stays_at_08():
+    tr = through_door_test(finished_robot_phase())
+    run(tr, [(3.0, dict(DONE, still=False))])
+    assert tr.score() == 0.8 and not tr.success()
+
+
+def test_movement_after_the_test_restarts_the_still_second():
+    tr = through_door_test(finished_robot_phase())
+    run(tr, [(0.8, DONE), (0.1, dict(DONE, still=False)), (0.8, DONE)])
+    assert tr.score() == 0.8
+    run(tr, [(0.3, DONE)])
+    assert tr.score() == 1.0
+
+
+def test_full_score_lost_if_the_door_springs_open_at_the_end():
+    tr = passed_door_test(finished_robot_phase())
+    assert tr.score() == 1.0
+    run(tr, [(0.5, dict(DONE, door=3.0))])
+    assert tr.score() == 0.8 and not tr.success()
 
 
 # -- the hinge loop: too short, trapped ------------------------------------------------------------------------------
@@ -284,6 +330,15 @@ def test_in_clip():
     over[:, 2] += 0.03
     assert not task.in_clip(over)
 
+
+
+def test_in_clip_needs_the_cord_under_the_lip():
+    """RB5 clip: clipped only when the cord's centre line is no higher than the lip's edge (3.9 mm above the floor)."""
+    xs = np.linspace(task.CLIP_X0 - 0.03, task.CLIP_X1 + 0.03, 30)
+    at = np.c_[xs, np.full_like(xs, task.CLIP_Y), np.full_like(xs, task.CLIP_FLOOR + task.LIP_Z)]
+    assert task.in_clip(at)
+    assert not task.in_clip(at + [0, 0, 0.0005])  # on the lip, not yet snapped under it
+    assert task.CLIP_X1 - task.CLIP_X0 == pytest.approx(0.019)  # the RB5's 19 mm length
 
 def test_outside_box():
     inside = np.array([[0.25, 0.0, task.TOP + 0.03], [0.30, -0.05, task.TOP + 0.01]])
