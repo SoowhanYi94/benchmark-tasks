@@ -20,8 +20,9 @@ Mechanism rules (wheel_mount.fixture has the geometry):
   the axis) and it turns on its thread. It can't come back off. Only a reset undoes this.
 - The spindle is held still until the nut is on (nothing else can turn it). After that it turns freely in its
   bearings unless the lock button is pressed down PRESSED or more.
-- Tightening: the torque it takes to turn the nut on is its free-run drag plus a term in the clamp force (the crush
-  spring's force; fixture.nut_hold), updated each step.
+- Tightening: the torque it takes to turn the nut on (either way) is its free-run drag plus K d times the clamp force
+  (the crush spring's force; fixture.nut_hold), updated each step; under that torque the nut holds still
+  (fixture.nut_clutch: a capped spring on a slipping anchor), so the clamp can't back it off.
 - Overtightening: whenever the nut turns on (TURNING_ON past the furthest it has been) while the torque it takes to
   turn it (fixture.nut_hold at the present clamp) is over the task's TORQUE_LIMIT (the maker's 20 lbf ft scaled by the
   task's SCALE), the wheel is cracked for the trial (latched: backing off doesn't clear it; only a reset does). A clamp
@@ -97,8 +98,7 @@ class WheelEmbodiment(YamArenaEmbodiment):
             for j in list(self._ls.get("limits", {})):
                 F.set_limits(mech, j, None, self._ls)  # put the built limits back before the reset moves things home
             F.set_clutch(mech, "spindle_turn", F.SPINDLE_DAMPING, F.SPINDLE_HOLD)
-            F.set_clutch(mech, "nut_turn", F.NUT_DAMPING, F.NUT_HOLD)
-        self._ls = {}
+        self._ls = {}  # (the nut's clutch starts again at the capture)
         self._hold = F.NUT_HOLD
         self._wall_q = F.SNUG_Y - F.RUN_DOWN - F.NUT_STAND_Y
         self._engaged = self._cracked = self._decoy = False
@@ -164,6 +164,8 @@ class WheelEmbodiment(YamArenaEmbodiment):
         F.lock_here(mech, "nut_pz", self._ls, at=0.0)
         F.lock_here(mech, "nut_py", self._ls, at=self._wall_q)
         F.set_limits(mech, "nut_turn", None, self._ls)
+        F.nut_clutch(mech, self._ls, F.NUT_HOLD, reset=True)
+        self._hold = F.NUT_HOLD
         self._engaged = True
         if DEBUG:
             print(f"NUT t={self._t:5.2f} threaded on", flush=True)
@@ -187,11 +189,9 @@ class WheelEmbodiment(YamArenaEmbodiment):
                 px, py, pz = st["nut"].pos
                 if abs(px) <= F.CAPTURE_R and abs(pz) <= F.CAPTURE_R and py >= self._wall_q - F.CAPTURE_Y:
                     self._capture()
-            if self._engaged:
-                hold = F.nut_hold(-self._q("nut_crush"))
-                if abs(hold - self._hold) > 0.002:
-                    F.set_clutch(self._mech(), "nut_turn", F.NUT_DAMPING, hold)
-                    self._hold = hold
+            if self._engaged:  # the nut's friction: its anchor follows it, its cap the torque at this clamp
+                self._hold = F.nut_hold(-self._q("nut_crush"))
+                F.nut_clutch(self._mech(), self._ls, self._hold)
             if self._engaged and self._seat_turn is None and -self._q("nut_crush") >= m.SEATED:
                 self._seat_turn = self._q("nut_turn")
                 if DEBUG:

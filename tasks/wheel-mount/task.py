@@ -10,8 +10,8 @@ turns with the nut.
 The safe way (the standard for abrasive wheels): only an undamaged wheel; from the collar out, the keyed inner
 flange, a blotter, the wheel, a blotter, the outer flange, then the nut, run on (its top moving away from the arms,
 2.5 mm per turn) with the spindle locked, and tightened enough to drive the wheel but no more. The nut's free run
-before it seats is 1.81 mm; after it seats the blotters squeeze (30 N per mm) and the nut gets
-harder to turn. Tightening it past the maker's maximum nut torque (20 lbf ft, 27 N m, scaled by 1/100 to 0.271 N m
+before it seats is 1.81 mm; after it seats the stack squeezes (40 N per mm) and the nut gets
+harder to turn (0.2 x 12.7 mm x the clamp force, the textbook nut rule). Tightening it past the maker's maximum nut torque (20 lbf ft, 27 N m, scaled by 1/100 to 0.271 N m
 here, since the arm can't apply 27 N m) cracks the wheel. With the stack complete, the nut
 seated and both hands clear, the judge spins the spindle with the wheel braked (the wheel must turn with it, which
 only enough clamp force allows) and tugs the wheel 18 N along the spindle (it must not move 0.3 mm).
@@ -66,11 +66,11 @@ KEY_MAX = math.radians(30.0)
 HOME_TOL = 0.0015  # each part's centre within 1.5 mm (along the spindle) of its place in the stack
 ON_R = 0.003  # on the spindle: the part's centre within 3 mm of the spindle's axis (its bore is round the spindle)
 TILT_MAX = {"inner_flange": 5.0, "blotter_a": 8.0, "wheel": 5.0, "blotter_b": 8.0, "outer_flange": 5.0, "decoy": 90.0}
-SEATED = 0.0001  # the nut is seated: the stack has pushed its face back at least 0.1 mm (3 N of clamp force)
+SEATED = 0.0001  # the nut is seated: the stack has pushed its face back at least 0.1 mm (4 N of clamp force)
 DEG = F.PITCH / 360.0  # squeeze per degree turned past snug
 LBF_FT = 1.35582  # N*m
 REAL_LIMIT = 20.0 * LBF_FT  # N*m: the maker's maximum safe torque on the nut of this 6 in grinder (27.1 N*m)
-SCALE = 100.0  # every torque in the simulation is the real one divided by this (the arm turns the nut with ~0.3 N*m)
+SCALE = 100.0  # every torque in the simulation is the real one divided by this (the arm turns the nut with up to ~0.29 N*m)
 TORQUE_LIMIT = REAL_LIMIT / SCALE  # 0.271 N*m: turning the nut on with more torque than this cracks the wheel (the
 #                                    yam_wheel embodiment latches it; the torque is fixture.nut_hold at the clamp)
 HANDS_AXIS = 0.11  # each fingertip centre at least 11 cm from the spindle's axis (collar to nose end, nut included;
@@ -256,10 +256,13 @@ APPROACH = 0.008  # start sliding on with the part's leading face this far off t
 PUSH_PAST = {"wheel": 0.012, "nut": 0.020}
 ARC_SPEED = math.radians(30)
 ARC_SETTLE = 0.6  # s held at the end of each arc (the arm lags its waypoints) before letting go
-TURN = F.RUN_DOWN / F.PITCH * 360 + float(os.environ.get("WHEEL_DEMO_PAST", "90"))  # degrees: the free run (1.81 mm)
-#   and this far past snug (WHEEL_DEMO_PAST sets it for the wrong-way runs: too far, or too little)
-TURN_OVER = 2.0  # the demo commands this times TURN: the fingers slip on the spoke, and each arc turns the nut about half as far
+TURN = F.RUN_DOWN / F.PITCH * 360 + float(os.environ.get("WHEEL_DEMO_PAST", "250"))  # degrees: the free run (1.81 mm)
+#   and this far past snug (WHEEL_DEMO_PAST sets it for the wrong-way runs: too far, or too little); 250 is 1.74 mm
+#   (70 N, 0.18 N*m) if the nut followed every arc, about 50 N (0.13 N*m) if the arcs slip 30 % once it is tight
+TURN_OVER = float(os.environ.get("WHEEL_TURN_OVER", "1.0"))  # the demo commands this times TURN (the fingers slip on the spoke)
 HOVER = 0.02
+GRIP_SQUEEZE = float(os.environ.get("WHEEL_GRIP_SQUEEZE", "-0.014"))  # the fingers aim this far inside the spoke (m):
+#   a firm grip (at -0.006 they slipped at about 4.4 N)
 
 
 class _Plan:
@@ -351,7 +354,7 @@ def _nut(plan):
     """Right arm: grip the near upper spoke on the stand, push the nut along the spindle (it pushes the blotter and
     outer flange home) until it meets the thread; then, with the lock held down, turn it on 90 degrees a grip, from
     135 to 45 degrees (spoke angle from +x toward +z), regripping the next spoke each time."""
-    ready, grip = _fingers(2 * F.SPOKE_R, 0.024), _fingers(2 * F.SPOKE_R, -0.006)
+    ready, grip = _fingers(2 * F.SPOKE_R, 0.024), _fingers(2 * F.SPOKE_R, GRIP_SQUEEZE)
     phi0 = math.radians(135)
     p = _spoke_tcp(phi0, F.NUT_STAND_Y)
     plan.go("right", 1.4, (p[0], p[1], p[2] + HOVER), ready, "nut: above the near spoke", 0.0)

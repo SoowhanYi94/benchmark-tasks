@@ -18,10 +18,10 @@ pointing to -y (the grinder's right-hand side, seen from the arms).
   slides are free (it moves like a loose part, but stays square to the spindle's axis) and it can't turn. Its y slide
   stops at the thread's start (WALL). The yam_wheel embodiment threads it on (`capture`) once it is pushed to the
   thread's start on the spindle's axis: its x, z and y slides lock and it can turn; turning it on (positively about +y,
-  its top moving away from the arms) runs it toward the collar at PITCH per turn. The nut's own clutch (NUT_HOLD) is
-  stronger than the spindle's bearings (SPINDLE_HOLD), so unless the spindle is locked, turning the nut turns the
-  spindle with it and the nut doesn't advance. Once the nut seats, the stack's blotters squeeze (nut_crush, a spring of
-  CRUSH_K: the clamp force) and the torque to turn the nut on rises with the clamp force (nut_hold). The thread's
+  its top moving away from the arms) runs it toward the collar at PITCH per turn. Once the nut seats, the stack squeezes
+  (nut_crush, a spring of CRUSH_K: the clamp force) and the torque to turn the nut on rises with the clamp force
+  (nut_hold: drag plus K d F), soon past what the spindle's bearings (SPINDLE_HOLD) hold, so unless the spindle is
+  locked, tightening the nut turns the spindle with it. The thread's
   free run before the seat is RUN_DOWN.
 - The loose parts (free rigid bodies): inner flange (D bore, keyed to the spindle's flat), two blotters, the wheel,
   the outer flange and a damaged wheel (a chip out of its rim and a crack). Each is a ring of convex segments, so its bore really
@@ -60,9 +60,10 @@ D_CHORD = 0.0044  # the inner flange's D bore: its flat 4.4 mm above the bore's 
 #                    with its flat lined up with the spindle's, and then turns with the spindle)
 PARTS = {  # name: outer radius, thickness, bore ("D" or "round"), mass (kg), look, physics material
     "inner_flange": (0.0254, 0.006, "D", 0.087, "oxide", "steel"),  # 2 in (50.8 mm) flanges, 1/3 of the wheel
-    "blotter_a": (0.028, 0.002, "round", 0.020, "paper", "paper"),  # 56 mm (our size: the manual gives none)
+    "blotter_a": (0.028, 0.002, "round", 0.080, "paper", "paper"),  # 56 mm (our size: the manual gives none); 80 g
     "wheel": (0.076, 0.019, "round", 0.700, "wheel", "abrasive"),  # 6 x 3/4 in; 0.70 kg is our estimate
-    "blotter_b": (0.028, 0.002, "round", 0.020, "paper", "paper"),  # (345 cm3 of vitrified abrasive at ~2.0 g/cm3)
+    "blotter_b": (0.028, 0.002, "round", 0.080, "paper", "paper"),  # (a solver stand-in: 20 g let the clamp sink
+    #                                                                   the flanges 1 mm into them); 0.70 kg wheel: 345 cm3 at ~2.0 g/cm3
     "outer_flange": (0.0254, 0.006, "round", 0.087, "steel", "steel"),
     "decoy": (0.076, 0.019, "round", 0.690, "wheel", "abrasive"),
 }
@@ -92,25 +93,30 @@ FACE_R, FACE_T = 0.012, 0.003  # the washer face, 24 mm
 HEX_AF, HEX_L = 0.019, 0.016  # 19 mm across flats, 16 mm long
 HUB_R, HUB_L = 0.009, 0.007
 SPOKE_Y = -(FACE_T + HEX_L + 0.011)  # the spokes' plane (30 mm out from the face, so the fingers clear the 6 in wheel)
-SPOKES, SPOKE_R, SPOKE_TIP = 4, 0.004, 0.065
+SPOKES, SPOKE_R, SPOKE_TIP = 4, 0.004, 0.076  # a wrench-length stand-in: as long as the axis's 85 mm height allows
+#   (a spoke pointing down clears the table by 5 mm); at 65 mm the fingers slipped before 0.271 N*m
 SPOKE_PHASE = math.radians(45.0)  # a spoke at 45 degrees from +x toward +z, then every 90
-GRIP_R = 0.056  # where the demo grips a spoke (from the axis)
+GRIP_R = 0.066  # where the demo grips a spoke (from the axis)
 NUT_STAND_Y = -0.235  # the nut's face plane on its stand (coaxial with the spindle)
 WALL_Q = WALL_Y - NUT_STAND_Y  # nut_py's upper limit: the thread's start
 CAPTURE_R = 0.0025  # the nut threads on once within this of the axis ...
 CAPTURE_Y = 0.001  # ... and its face within this of the thread's start
-CRUSH_K = 30000.0  # N/m: the blotters' squeeze (the clamp's spring)
-CRUSH_MAX = 0.0025
+CRUSH_K = 40000.0  # N/m: the stack's squeeze under the nut (the clamp's spring; our value)
+CRUSH_MAX = 0.0035
 STAND = ((-0.006, NUT_STAND_Y - FACE_T - HEX_L + 0.002, 0.0), (0.006, NUT_STAND_Y - FACE_T - 0.002, ZA - HEX_AF / 2))
 
 # -- clutches and the judge ----------------------------------------------------------------------------------------
-SPINDLE_HOLD, SPINDLE_DAMPING = 0.03, 0.5  # N*m, N*m*s/rad: the spindle's bearings
-NUT_HOLD, NUT_DAMPING = 0.12, 20.0  # the nut's free-run drag on its thread (damping high: friction capped at the hold)
-NUT_PER_N = 0.008  # N*m of turning torque added per N of clamp force (face and thread friction): 0.22 N*m at 12.5 N
+SPINDLE_HOLD, SPINDLE_DAMPING = 0.003, 0.5  # N*m, N*m*s/rad: the spindle's bearings (under the nut's drag)
+NUT_HOLD = 0.005  # N*m: the nut's free-run drag on its thread (0.5 N*m real; ours)
+NUT_SPRING, NUT_DAMPING = 20.0, 0.02  # N*m/rad, N*m*s/rad: the nut's friction is a spring on an anchor that slips once
+#   it carries the hold (Coulomb: it holds still under anything less, so the clamp can't back the nut off)
+NUT_K, NUT_D = 0.2, 0.0127  # the nut factor and the thread's nominal diameter (1/2 in): T = K d F, the textbook rule
+NUT_PER_N = NUT_K * NUT_D  # 0.00254 N*m of turning torque per N of clamp force (face and thread friction)
 SLIDE_HOLD, SLIDE_DAMPING = 0.2, 5.0  # N, N*s/m: the loose nut (less than its weight, so it falls)
 BUTTON_K, BUTTON_PRELOAD = 800.0, 0.002  # N/m; the spring's rest point above the top stop (1.6 N held up)
 
-PART_ITERS = 128  # solver position iterations for the loose parts (a stack of five under load converges)
+PART_ITERS = 255  # solver position iterations for the loose parts (at 128 the flanges sank through the 80 g blotters
+#                   above 80 N of clamp; 255 holds the stack to 112 N)
 
 # -- the parts tray (frame; part centres in the fixture frame) -----------------------------------------------------
 RAIL_R, RAIL_A, RAIL_Z = 0.003, 0.015, 0.010  # two rails along y under each row, at the slot's x +- RAIL_A
@@ -140,12 +146,15 @@ def slot_pos(name):
 
 
 MASS = {"anchor": 0.5, "spindle": 0.15, "button": 0.02, "nut_bx": 0.005, "nut_bz": 0.005, "nut_by": 0.005,
-        "nut_bt": 0.005, "nut": 0.08, "nut_face": 0.03}
+        "nut_bt": 0.005, "nut": 0.08, "nut_face": 0.10}
 COLORS = {"housing": (0.24, 0.32, 0.46), "guard": (0.55, 0.57, 0.60), "wheel": (0.50, 0.47, 0.42),
           "paper": (0.93, 0.88, 0.58), "oxide": (0.13, 0.13, 0.14), "steel": (0.74, 0.75, 0.78),
           "dark": (0.10, 0.10, 0.11), "red": (0.80, 0.07, 0.05), "tray": (0.36, 0.37, 0.39),
           "nut": (0.42, 0.43, 0.46), "crack": (0.05, 0.05, 0.05)}
-FRICTION = {"steel": 0.5, "paper": 0.8, "abrasive": 0.7, "grip": 1.0}
+FRICTION = {"steel": 0.5, "paper": 0.8, "abrasive": 0.7, "grip": 1.0, "nut_face": 0.02}
+MIN_COMBINE = ("nut_face",)  # the nut's washer face: its friction is already in NUT_PER_N (K includes it), so its
+#                              contact carries next to none (min combine: 0.02 against any part)
+MECH_ITERS = 64  # the articulation's solver position iterations
 
 
 # -- geometry helpers (NumPy) ----------------------------------------------------------------------------------------
@@ -203,6 +212,35 @@ def set_limits(mech, joint, limits, state):
     new = orig[joint] if limits is None else torch.tensor([[list(limits)]], dtype=lim.dtype, device=lim.device)
     mech.write_joint_position_limit_to_sim_index(limits=new.contiguous(), joint_ids=ids, warn_limit_violation=False)
     mech.data._default_joint_pos.zero_()
+
+
+def nut_clutch(mech, state, hold, reset=False):
+    """The nut's turning friction, once per control step: a spring (NUT_SPRING) pulls the nut toward an anchor, its
+    torque capped at ``hold``; the anchor follows the nut so the spring never stretches past hold / NUT_SPRING. So the
+    nut holds still under any torque under ``hold`` and turns against ``hold`` (Coulomb friction)."""
+    import torch
+    import warp as wp
+
+    names = mech.joint_names
+    i = names.index("nut_turn")
+    q = float(mech.data.joint_pos.torch[0, i])
+    if reset or "anchor" not in state:
+        state["anchor"] = q
+    s = hold / NUT_SPRING
+    state["anchor"] = min(max(state["anchor"], q - s), q + s)
+    dev = mech.data.joint_pos.torch.device
+    if "targets" not in state:
+        state["targets"] = torch.zeros((1, len(names)), dtype=torch.float32, device=dev)
+        state["targets"][0, names.index("lock_press")] = BUTTON_PRELOAD
+        mech.write_joint_stiffness_to_sim_index(stiffness=torch.full((1, 1), NUT_SPRING, device=dev), joint_ids=[i])
+        mech.write_joint_damping_to_sim_index(damping=torch.full((1, 1), NUT_DAMPING, device=dev), joint_ids=[i])
+    state["targets"][0, i] = state["anchor"]
+    mech.write_joint_effort_limit_to_sim_index(limits=torch.full((1, 1), float(hold), device=dev), joint_ids=[i])
+    t = state["targets"]
+    if mech.data.has_joint_ordering:
+        b2u = torch.as_tensor(np.asarray(mech.data.joint_ordering.backend_to_user.numpy()), device=dev).long().reshape(-1)
+        t = t[:, b2u]
+    mech.root_view.set_dof_position_targets(wp.from_torch(t.contiguous()), mech._ALL_INDICES)
 
 
 def lock_here(mech, joint, state, at=None):
@@ -268,6 +306,11 @@ class _Builder:
         pm.CreateStaticFrictionAttr(mu)
         pm.CreateDynamicFrictionAttr(mu)
         pm.CreateRestitutionAttr(0.0)
+        if name in MIN_COMBINE:
+            from pxr import Sdf
+
+            mat.GetPrim().AddAppliedSchema("PhysxMaterialAPI")
+            mat.GetPrim().CreateAttribute("physxMaterial:frictionCombineMode", Sdf.ValueTypeNames.Token).Set("min")
         return mat
 
     def collider(self, prim, mat="steel", offset=0.001):
@@ -278,7 +321,7 @@ class _Builder:
                                              "physxCollision:restOffset": 0.0})
         UsdShade.MaterialBindingAPI.Apply(prim).Bind(self.phys[mat], UsdShade.Tokens.weakerThanDescendants, "physics")
 
-    def rigid(self, prim, kinematic=False, mass=None, inertia=None, iters=32):
+    def rigid(self, prim, kinematic=False, mass=None, inertia=None, iters=32, com=(0.0, 0.0, 0.0)):
         from pxr import Gf, UsdPhysics
 
         UsdPhysics.RigidBodyAPI.Apply(prim).CreateKinematicEnabledAttr(kinematic)
@@ -288,7 +331,7 @@ class _Builder:
         if mass is not None:
             m = UsdPhysics.MassAPI.Apply(prim)
             m.CreateMassAttr(float(mass))
-            m.CreateCenterOfMassAttr(Gf.Vec3f(0.0, 0.0, 0.0))
+            m.CreateCenterOfMassAttr(Gf.Vec3f(*map(float, com)))
             if inertia is not None:
                 m.CreateDiagonalInertiaAttr(Gf.Vec3f(*map(float, inertia)))
 
@@ -408,12 +451,19 @@ def build_mech(stage, path, world_origin, world_rot=None):
     prim = stage.GetPrimAtPath(path) if stage.GetPrimAtPath(path) else UsdGeom.Xform.Define(stage, path).GetPrim()
     UsdPhysics.ArticulationRootAPI.Apply(prim)
     _physx(prim, "PhysxArticulationAPI", **{"physxArticulation:enabledSelfCollisions": False,
-                                            "physxArticulation:solverPositionIterationCount": 32,
+                                            "physxArticulation:solverPositionIterationCount": MECH_ITERS,
                                             "physxArticulation:solverVelocityIterationCount": 1})
     bodies = {}
+    y0 = NUT_STAND_Y
+    # each link's centre of mass on its own axis (at the link frame's origin, 8.5 cm under the spindle, every turning
+    # link hung like a pendulum: about 0.15 N*m pulling the nut back toward where it started)
+    coms = {"anchor": (0.0, 0.0, 0.0), "spindle": (0.0, -0.02, ZA), "button": (*BUTTON_XY, BUTTON_Z0 + BUTTON_H / 2),
+            "nut_bx": (0.0, y0, ZA), "nut_bz": (0.0, y0, ZA), "nut_by": (0.0, y0, ZA), "nut_bt": (0.0, y0, ZA),
+            "nut": (0.0, y0 - FACE_T - HEX_L / 2, ZA), "nut_face": (0.0, y0 - FACE_T / 2, ZA)}
     for name, m in MASS.items():
         bodies[name] = UsdGeom.Xform.Define(stage, f"{path}/{name}").GetPrim()
-        b.rigid(bodies[name], mass=m, inertia=(m * 4e-4, m * 4e-4, m * 4e-4))
+        inertia = (3e-4,) * 3 if name == "nut" else (m * 4e-4,) * 3  # the nut with its 15 cm spoked handle: ~3e-4 kg m2
+        b.rigid(bodies[name], mass=m, inertia=inertia, com=coms[name])
     # the spindle: collar and shaft (with its flat), one convex hull
     s = f"{path}/spindle"
     _ycyl(b, f"{s}/collar", COLLAR_R, *COLLAR_Y, "steel", collide=True)
@@ -430,7 +480,6 @@ def build_mech(stage, path, world_origin, world_rot=None):
     _zcyl(b, f"{path}/button/cap", BUTTON_R, BUTTON_XY, BUTTON_Z0, BUTTON_Z0 + BUTTON_H, "red", collide=True,
           mat="grip")
     # the nut, built on its stand (nut frame origin at (0, NUT_STAND_Y, ZA))
-    y0 = NUT_STAND_Y
     n = f"{path}/nut"
     hex_pts = []
     for k in range(6):
@@ -442,7 +491,7 @@ def build_mech(stage, path, world_origin, world_rot=None):
     _ycyl(b, f"{n}/hub", HUB_R, y0 + SPOKE_Y - HUB_L / 2, y0 - FACE_T - HEX_L + 0.001, "dark", collide=True)
     for k, phi in enumerate(spoke_angles(0.0)):
         _spoke(b, f"{n}/spoke_{k}", phi, y0 + SPOKE_Y)
-    _ycyl(b, f"{path}/nut_face/face", FACE_R, y0 - FACE_T, y0, "nut", collide=True, mat="steel")
+    _ycyl(b, f"{path}/nut_face/face", FACE_R, y0 - FACE_T, y0, "nut", collide=True, mat="nut_face")
     # joints
     fix = UsdPhysics.FixedJoint.Define(stage, f"{path}/fix")
     fix.CreateBody1Rel().SetTargets([bodies["anchor"].GetPath()])
@@ -484,7 +533,7 @@ def build_mech(stage, path, world_origin, world_rot=None):
         d.CreateMaxForceAttr(float(cap))
 
     drive("spindle_turn", "angular", SPINDLE_DAMPING * math.pi / 180, SPINDLE_HOLD)  # USD angular drives: per degree
-    drive("nut_turn", "angular", NUT_DAMPING * math.pi / 180, NUT_HOLD)
+    drive("nut_turn", "angular", NUT_DAMPING * math.pi / 180, NUT_HOLD, NUT_SPRING * math.pi / 180)
     for name in ("nut_px", "nut_pz", "nut_py"):
         drive(name, "linear", SLIDE_DAMPING, SLIDE_HOLD)
     drive("lock_press", "linear", 20.0, 20.0, BUTTON_K, BUTTON_PRELOAD)

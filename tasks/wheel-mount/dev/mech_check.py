@@ -10,6 +10,7 @@ the tightened stack and on a loose one; and sim speed.
 """
 
 import argparse
+import os
 import math
 import sys
 import time
@@ -33,8 +34,24 @@ from pxr import Gf, UsdGeom  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from wheel_mount import fixture as F  # noqa: E402
 import task as T  # noqa: E402
+import os  # noqa: E402
+for _k in ('NUT_HOLD', 'CRUSH_K', 'SPINDLE_HOLD'):  # spike overrides (MECH_NUT_HOLD=...)
+    if os.environ.get('MECH_' + _k):
+        setattr(F, _k, float(os.environ['MECH_' + _k]))
+if os.environ.get('MECH_PART_ITERS'):
+    F.PART_ITERS = int(os.environ['MECH_PART_ITERS'])
+if os.environ.get('MECH_ITERS'):
+    F.MECH_ITERS = int(os.environ['MECH_ITERS'])
+if os.environ.get('MECH_BLOTTER_KG'):
+    for _n in ('blotter_a', 'blotter_b'):
+        _p = list(F.PARTS[_n]); _p[3] = float(os.environ['MECH_BLOTTER_KG']); F.PARTS[_n] = tuple(_p)
+if os.environ.get('MECH_FACE_KG'):
+    F.MASS['nut_face'] = float(os.environ['MECH_FACE_KG'])
+print(f'ITERS {F.MECH_ITERS} blotter {F.PARTS["blotter_a"][3]} kg face {F.MASS["nut_face"]} kg', flush=True)
+print(f'NUT_HOLD {F.NUT_HOLD} NUT_PER_N {F.NUT_PER_N} CRUSH_K {F.CRUSH_K} SPINDLE_HOLD {F.SPINDLE_HOLD}', flush=True)
 
 DT = 1 / 240
+EVERY = int(os.environ.get("MECH_EVERY", "12"))
 sim = sim_utils.SimulationContext(sim_utils.SimulationCfg(
     dt=DT, device="cuda:0", use_newton_actuators=False,
     physics=PhysxCfg(solver_type=1, bounce_threshold_velocity=0.2)))
@@ -74,7 +91,7 @@ def nut_abs():
     return q("spindle_turn") + q("nut_turn")
 
 
-def step(n, nut=0.0, spindle=0.0, nut_push=0.0, brake=0.0, tug=0.0, hand=0.0):
+def step(n, nut=0.0, spindle=0.0, nut_push=0.0, brake=0.0, tug=0.0, hand=0.0, keep=False):
     """``hand``: turn the nut like a hand would, its angle (from the world) ramped at ``hand`` rad/s by a stiff PD
     capped at 0.5 N*m."""
     t = time.perf_counter()
@@ -82,14 +99,16 @@ def step(n, nut=0.0, spindle=0.0, nut_push=0.0, brake=0.0, tug=0.0, hand=0.0):
     f = torch.zeros(1, 2, 3, device=sim.device)
     tq[0, 0, 1], tq[0, 1, 1], f[0, 1, 1] = spindle, nut, nut_push
     w = parts["wheel"]
-    if hand:
+    if hand and not (keep and HAND.get("target") is not None):
         HAND["target"] = nut_abs()
     for _ in range(n):
-        F.set_clutch(mech, "nut_turn", F.NUT_DAMPING, F.nut_hold(-q("nut_crush")))
+        if wall[1] % EVERY == 0:  # the embodiment updates the nut's hold once per 20 Hz control step
+            F.nut_clutch(mech, LS, F.nut_hold(-q("nut_crush")))
         if hand:
             HAND["target"] += hand * DT
             w_abs = float(mech.data.joint_vel.torch[0, J["spindle_turn"]] + mech.data.joint_vel.torch[0, J["nut_turn"]])
-            tq[0, 1, 1] = max(-1.0, min(1.0, 20.0 * (HAND["target"] - nut_abs()) - 0.2 * w_abs))
+            tq[0, 1, 1] = max(-1.0, min(1.0, 2.0 * (HAND["target"] - nut_abs()) - 0.02 * w_abs))
+            HAND.setdefault("log", []).append(float(tq[0, 1, 1]))
         mech.permanent_wrench_composer.set_forces_and_torques_index(
             forces=f, torques=tq, body_ids=[B["spindle"], B["nut"]], is_global=True)
         w.permanent_wrench_composer.set_forces_and_torques_index(
@@ -134,8 +153,25 @@ F.lock_here(mech, "nut_px", LS, at=0.0)
 F.lock_here(mech, "nut_pz", LS, at=0.0)
 F.lock_here(mech, "nut_py", LS, at=F.WALL_Q)
 F.set_limits(mech, "nut_turn", None, LS)
+F.nut_clutch(mech, LS, F.NUT_HOLD, reset=True)
 step(60)
 report("threaded on at the thread's start")
+if os.environ.get("MECH_PROBE"):
+    v = mech.root_view
+    print("PROBE names", mech.joint_names, "ordering", mech.data.has_joint_ordering, flush=True)
+    for nm in ("get_dof_position_targets", "get_dof_stiffnesses", "get_dof_dampings", "get_dof_max_forces"):
+        try:
+            print("PROBE", nm, getattr(v, nm)().numpy().round(4).tolist(), flush=True)
+        except Exception as e:  # noqa: BLE001
+            print("PROBE", nm, "failed", e, flush=True)
+    for k in range(40):
+        step(12, hand=math.radians(45) if k < 20 else 0.0, keep=k > 0)
+        print(f"PROBE t={k * 0.05:.2f} hand={'on' if k < 20 else 'off'} nut {math.degrees(q('nut_turn')):7.2f} anchor "
+              f"{math.degrees(LS['anchor']):7.2f} tgt {math.degrees(float(v.get_dof_position_targets().numpy()[0, 5])):7.2f} crush {-1000 * q('nut_crush'):.3f} spindle {math.degrees(q('spindle_turn')):.2f}", flush=True)
+    print("PROBE targets after", v.get_dof_position_targets().numpy().round(4).tolist(), flush=True)
+    print("PROBE max forces after", v.get_dof_max_forces().numpy().round(4).tolist(), flush=True)
+    app.close()
+    sys.exit(0)
 F.set_limits(mech, "spindle_turn", None, LS)
 step(240, hand=math.radians(45))
 report("spindle free, the hand turns the nut 45 deg (spindle should turn with it, nut not advance)")
@@ -146,21 +182,30 @@ RATE = math.radians(45)
 def turn_to(deg_on):
     """Turn the nut on (relative to the spindle) to ``deg_on`` degrees from where it caught."""
     d = math.radians(deg_on) - q("nut_turn")
+    if d < math.radians(2):  # never turned back (the spin can tighten the nut itself)
+        step(60)
+        return
     if abs(d) > 1e-4:
+        HAND["log"] = []
         step(max(1, round(abs(d) / RATE / DT)), hand=math.copysign(RATE, d))
+        n_log = len(HAND["log"])
+        tail = HAND["log"][n_log // 4: 3 * n_log // 4] or HAND["log"]  # the middle half of the turn
+        c = -q("nut_crush")
+        print(f"CURVE turned to {deg_on:.0f} deg: clamp {F.CRUSH_K * c:6.1f} N, hand torque while turning {sum(tail) / len(tail):.4f} N*m, model {F.nut_hold(c):.4f} N*m", flush=True)
     step(60)
 
 
 def judge(tag):
     F.set_limits(mech, "spindle_turn", None, LS)
     F.set_clutch(mech, "spindle_turn", T.SPIN_D, 1.0)
-    c0, s0, w0 = -q("nut_crush"), q("spindle_turn"), wheel_angle()
+    c0, s0, w0, n0 = -q("nut_crush"), q("spindle_turn"), wheel_angle(), q("nut_turn")
     slip = 0.0
     for k in range(round(T.SPIN_S / DT / 10)):
         turned = w0 - wheel_angle()
         step(10, spindle=-T.SPIN_T, brake=T.BRAKE * min(1.0, max(0.0, turned / T.BRAKE_RAMP)))
         slip = max(slip, abs((wheel_angle() - w0) - (q("spindle_turn") - s0)))
     spun = q("spindle_turn") - s0
+    nut_d = q("nut_turn") - n0
     F.set_clutch(mech, "spindle_turn", F.SPINDLE_DAMPING, F.SPINDLE_HOLD)
     step(60)
     y0, move = float(parts["wheel"].data.root_pos_w.torch[0, 1]), 0.0
@@ -173,18 +218,41 @@ def judge(tag):
     print(f"JUDGE [{tag}] crush {1000 * c0:.3f} -> {-1000 * q('nut_crush'):.3f} mm | spin {math.degrees(spun):+.1f} deg"
           f" slip {math.degrees(slip):.2f} deg {'ok' if ok_s else 'SLIPPED'} | tug moved {1000 * move:+.3f} mm "
           f"{'ok' if ok_t else 'MOVED'} | hold {F.nut_hold(c0):.3f} N*m ({'OVER' if F.nut_hold(c0) > T.TORQUE_LIMIT else 'under'}"
-          f" the {T.TORQUE_LIMIT:.3f} N*m limit)", flush=True)
+          f" the {T.TORQUE_LIMIT:.3f} N*m limit) | clamp {F.CRUSH_K * c0:.1f} N | nut turned in the tests {math.degrees(q('nut_turn') - n0):+.2f} deg (spin {math.degrees(nut_d):+.2f})", flush=True)
     F.lock_here(mech, "spindle_turn", LS)
 
 
 SNUG_DEG = F.RUN_DOWN / F.PITCH * 360
-import os  # noqa: E402
-for past in [int(v) for v in os.environ.get("MECH_PASTS", "10,20,30,40,60,80,120,200").split(",")]:
-    turn_to(SNUG_DEG + past)
-    report(f"turned {past} past snug")
-    judge(f"{past} deg past snug")
+def turn_to_clamp(f_target):
+    """Turn the nut on in short pushes until the clamp reaches ``f_target`` N (never back)."""
+    HAND["log"], HAND["target"] = [], None
+    best, since = 0.0, 0
+    for _ in range(4000):
+        f = F.CRUSH_K * -q("nut_crush")
+        if f >= f_target:
+            break
+        best, since = (f, 0) if f > best + 0.5 else (best, since + 1)
+        if since > 100:  # 5 s of turning without 0.5 N more clamp
+            print(f"STALL at {f:.1f} N clamp, nut {math.degrees(q('nut_turn')):.1f} deg, thread {1000 * q('nut_thread'):.3f} mm", flush=True)
+            report("stalled")
+            break
+        step(12, hand=RATE, keep=True)
+    n_log = len(HAND["log"])
+    mid = HAND["log"][n_log // 4: 3 * n_log // 4] or HAND["log"] or [0.0]
+    c = -q("nut_crush")
+    step(60)
+    c2 = -q("nut_crush")
+    print(f"CURVE clamp {F.CRUSH_K * c:6.1f} N (after 0.25 s hands off {F.CRUSH_K * c2:6.1f} N), nut {math.degrees(q('nut_turn')):6.1f} deg, "
+          f"hand torque while turning {sum(mid) / len(mid):.4f} N*m, model {F.nut_hold(c):.4f} N*m", flush=True)
+
+
+for fc in [float(v) for v in os.environ.get("MECH_CLAMPS", "2,4,6,8,10,13,16,20,25,30,40,55,70,90,100,110").split(",")]:
+    turn_to_clamp(fc)
+    report(f"clamp {fc:.0f} N")
+    judge(f"clamp {fc:.0f} N")
 t0 = q("nut_turn")
 step(480, nut_push=90.0)
+print(f'clamp {F.CRUSH_K * -q("nut_crush"):.1f} N, hold {F.nut_hold(-q("nut_crush")):.3f}', flush=True)
 print(f"90 N push along +y turned the nut {math.degrees(q('nut_turn') - t0):+.2f} deg", flush=True)
 sim_s = wall[1] * DT
 print(f"speed {sim_s:.1f} s sim in {wall[0]:.1f} s = {sim_s / wall[0]:.2f}x real time", flush=True)

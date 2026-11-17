@@ -263,10 +263,12 @@ def test_thread_start_is_fixed():
 
 
 def test_nut_gets_harder_to_turn_as_it_squeezes_the_stack():
+    # T = drag + K d F: the textbook nut rule, K = 0.2 and d = 12.7 mm (the 1/2 in arbor), with the clamp F scaled by 1/100
     free = F.nut_hold(0.0)
-    assert F.nut_hold(-0.001) == free
-    assert F.nut_hold(60 * t.DEG) > 1.7 * free and F.nut_hold(120 * t.DEG) > 2.5 * free
-    assert F.nut_hold(240 * t.DEG) < 0.6  # 240 degrees past snug: still within a hand's turn on the spoke
+    assert free == F.NUT_HOLD < 0.01 and F.nut_hold(-0.001) == free
+    assert F.NUT_PER_N == pytest.approx(0.2 * 0.0127)
+    for c in (0.0002, 0.001, 0.002):
+        assert F.nut_hold(c) == pytest.approx(F.NUT_HOLD + 0.00254 * F.CRUSH_K * c)
 
 
 def test_torque_limit_is_the_makers_20_lbf_ft_scaled():
@@ -275,11 +277,15 @@ def test_torque_limit_is_the_makers_20_lbf_ft_scaled():
 
 
 def test_torque_window_is_open():
-    # dev/mech_check.py: the spin and tug first pass at about 0.37 mm of squeeze; the limit must sit well above that,
-    # and an over-tightened nut (1 mm, which the stack reaches) well above the limit
-    assert F.nut_hold(0.00037) < t.TORQUE_LIMIT - 0.05
-    assert F.nut_hold(0.001) > t.TORQUE_LIMIT + 0.08
-    assert F.nut_hold(0.00063) == pytest.approx(t.TORQUE_LIMIT, abs=0.002)  # the limit at 0.63 mm (19 N of clamp)
+    # the limit (27.1 N*m / 100) is reached at about 105 N of clamp, the real clamp at 27.1 N*m (10.7 kN by T = K d F)
+    # divided by 100, inside the stack's travel
+    f_limit = (t.TORQUE_LIMIT - F.NUT_HOLD) / F.NUT_PER_N
+    assert 102 < f_limit < 108 and f_limit / F.CRUSH_K < F.CRUSH_MAX - 0.0005
+    # dev/mech_check.py: the braked spin first holds at about 20 N of clamp (slips at 16.5 N); the tug at about 6 N
+    assert F.nut_hold(20.5 / F.CRUSH_K) < t.TORQUE_LIMIT / 4
+    tug_needs = t.TUG_N - F.CRUSH_K * t.TUG_MOVE  # the preload under which the 18 N tug moves the wheel 0.3 mm
+    assert 4 < tug_needs < 16.5  # a seating check: looser than the spin, tighter than just touching
+    assert F.CRUSH_K * t.SEATED < tug_needs
 
 
 def test_decoy_has_its_chip_and_no_tag():
@@ -327,3 +333,10 @@ def test_seated_needs_the_stack_home():
     p[1] -= 0.001
     w["outer_flange_root"].pos = p
     assert not t.seated(w)
+
+
+def test_spokes_wrench_length_and_clear_of_the_table():
+    # the spokes are a wrench-length stand-in, as long as the axis height allows: one pointing down clears the table
+    assert F.SPOKE_TIP == pytest.approx(0.076)
+    assert 0.004 <= F.ZA - F.SPOKE_TIP - F.SPOKE_R <= 0.006
+    assert F.SPOKE_TIP - F.GRIP_R >= 0.008  # the fingers grip inside the tip
