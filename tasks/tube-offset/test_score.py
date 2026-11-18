@@ -1,326 +1,196 @@
-"""Scoring checks with no simulator: python -m pytest -q test_score.py"""
+"""Scoring checks without the simulator (NumPy only): python -m pytest -q test_score.py"""
+
+import json
 import math
-from types import SimpleNamespace as NS
+import pathlib
 
 import numpy as np
 import pytest
 
-import task as t
+import task as T
+from tube_offset import mech as M
+from yam_arena.task_file import ObjectState
 
-M = t.M
-PARK = {"left_tcp": (0.12, 0.34, t.PARK[2]), "right_tcp": (0.12, -0.34, t.PARK[2])}
-BENT = t.BENT
-Z = t.BED_TOP
-ON = (0.25, 0.15, Z)  # a place well inside the bed, whichever way it lies
+HERE = pathlib.Path(__file__).parent
+FAR = np.array((0.0, 0.6, 1.2))
+D = math.radians
 
 
-def yawq(a):
-    return np.array((0.0, 0.0, math.sin(a / 2), math.cos(a / 2)))
+def _quat(yaw):
+    return np.array((0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2)))
 
 
-def state(pos, quat=None, lin=(0.0, 0.0, 0.0), ang=(0.0, 0.0, 0.0)):
-    p = np.array(pos, float)
-    return NS(pos=p, quat_xyzw=yawq(0.0) if quat is None else quat, lin_vel=np.array(lin, float), ang_vel=np.array(ang, float), low=p, high=p)
+def states(q=None, origin=T.LANE_AT, yaw=T.LAID_YAW, z=M.TUBE_R, left=FAR, right=FAR, vel=0.0, sup=0.0, clev=0.0):
+    """A fake simulator reading: the tube laid flat at height z (centre above the table), hinges q, hands at left/right."""
+    q = {} if q is None else q
+    f = T.tube_fk(q, origin, yaw)
+    s = {}
+    for n, (x, y, a) in f.items():
+        p = np.array((x, y, T.TOP + z))
+        s[f"tube/{n}"] = ObjectState(pos=p, quat_xyzw=_quat(a), lin_vel=np.array((vel, 0, 0)), ang_vel=np.zeros(3), low=p, high=p)
+    for k, p in (("left_tcp", left), ("right_tcp", right)):
+        s[k] = ObjectState(pos=np.asarray(p, float), quat_xyzw=_quat(0), lin_vel=np.zeros(3), ang_vel=np.zeros(3), low=p, high=p)
+    s["q"] = {f"tube/{j}": q.get(j, 0.0) for j in T.HINGES}
+    s["q"].update({"bender/support_turn": sup, "bender/clevis_turn": clev, "bender/latch_turn": 0.0})
+    return s
 
 
-def tube(at=None, psi=0.0, q1=0.0, q2=0.0):
-    """The tube with its middle segment here, heading psi, bends q1 and q2: the segments' origins all sit on their own hinges' frame, as in the sim."""
-    at = np.array(at if at is not None else (t.START[0], t.START[1], Z), float)
-    return {"tube_mid": state(at, yawq(psi)), "tube_nose": state(at + _pivot(psi, -1) - _turned(psi + q1, -1), yawq(psi + q1)),
-            "tube_tail": state(at + _pivot(psi, 1) - _turned(psi + q2, 1), yawq(psi + q2)), "tube_q": state((q1, q2, 0.0))}
+def run(s, steps=30, tool=True):
+    """A fresh trial whose bends were all made by the bender, then `steps` control steps of the reading s."""
+    T.reset_latch()
+    if tool:
+        _made_by(s, True)
+    for _ in range(steps):
+        T.note_step(s, 0.05)
+    return T.score(s)
 
 
-def _pivot(psi, s):
-    return np.array((-math.sin(psi) * s * t.L_M / 2, math.cos(psi) * s * t.L_M / 2, 0.0))
+def _made_by(s, tool):
+    a = np.array([s["q"][f"tube/{j}"] for j in T.HINGES])
+    T.note_plastic(a, D(1.0) if tool else 0.0, 0.0 if tool else T.CLEVIS_SNAP - 0.1)
 
 
-_turned = _pivot  # a segment's own origin is on the middle's, so its hinge sits L_M/2 along its own +y
+def offset(a=45.0, b=45.0, n=5):
+    return T.ideal_q(D(a), D(b), n)
 
 
-def world(at=None, psi=0.0, q1=0.0, q2=0.0, phi=0.0, **over):
-    w = {a: state(p) for a, p in PARK.items()}
-    w.update(tube(at, psi, q1, q2))
-    w["handle"] = state((phi, 0.0, 0.0))
-    for k, v in over.items():
-        w[k] = v if isinstance(v, NS) else state(v)
-    return w
+def test_finished_offset_in_the_bender_scores_full():
+    assert run(states(offset())) == 1.0
 
 
-def finished(q=-BENT, q2=None):
-    """The finished tube lying on the template: its long ends along y, in the lanes."""
-    q2 = q if q2 is None else q2
-    return world((*t.GRIP_AT, Z), psi=math.pi + abs(q), q1=q, q2=q2)
+def test_needs_one_second_of_rest():
+    assert run(states(offset()), steps=20) == 0.9  # 0.95 s (rest is read between steps)
+    assert run(states(offset()), steps=21) == 1.0
+    T.reset_latch()
+    _made_by(states(offset()), True)
+    for k in range(30):  # creeping 1.5 cm/s
+        T.note_step(states(offset(), origin=(T.LANE_AT[0] + 0.00075 * k, T.LANE_AT[1])), 0.05)
+    assert T.score(states(offset())) == 0.9
 
 
-@pytest.fixture(autouse=True)
-def fresh():
-    t.reset_latch()
+def test_must_be_let_go():
+    near = T.tube_fk(offset(), T.LANE_AT, T.LAID_YAW)["leg_a"]
+    hand = np.array((near[0], near[1], T.TOP + 0.05))
+    assert run(states(offset(), left=hand)) == 0.0
+    assert run(states(offset(), right=hand + (0, 0, 0.02))) == 1.0  # 7 cm above the leg: let go
 
 
-def run(w, n=22):
-    for _ in range(n):
-        t.note_step(w, 0.05)
-    return t.score(w)
+def test_straight_tube_scores_zero():
+    assert run(states()) == 0.0
 
 
-def test_start_scores_zero():
-    assert run(world()) == 0.0
+def test_one_bend():
+    assert run(states(offset(45, 0))) == 0.25
+    assert run(states(offset(45, 30))) == 0.25
+    assert run(states(offset(0, 44))) == 0.25
 
 
-def test_full_marks():
-    assert run(finished()) == 1.0
+def test_bend_tolerance():
+    assert run(states(offset(41.2, 41.2))) == 1.0
+    assert run(states(offset(40.5, 45))) == 0.25
+    assert run(states(offset(49.5, 45))) == 0.25
 
 
-def test_needs_a_second_of_rest():
-    assert run(finished(), n=5) == 0.9
+def test_not_parallel_or_offset_wrong():
+    assert run(states(offset(42, 47))) == 0.5  # ends 5 degrees apart
 
 
-def test_moving_tube_is_not_at_rest():
-    w = finished()
-    w["tube_mid"].lin_vel = np.array((0.05, 0.0, 0.0))
-    assert run(w) == 0.9
+def test_roll_support_must_be_back_at_0():
+    assert run(states(offset(), sup=D(4.9))) == 1.0
+    assert run(states(offset(), sup=D(-4.9))) == 1.0
+    assert run(states(offset(), sup=D(5.5))) == 0.75
+    assert run(states(offset(), sup=D(45.0))) == 0.75
 
 
-def test_one_good_bend_is_a_quarter():
-    assert run(world(ON, q1=-BENT)) == 0.25
-
-
-def test_either_band_first():
-    assert run(world(ON, q2=-BENT)) == 0.25
-
-
-def test_both_bends_not_parallel_is_a_half():
-    assert run(world(ON, q1=-math.radians(40.0), q2=-math.radians(50.5))) == 0.5
-
-
-def test_both_bends_parallel_off_the_template():
-    assert run(world(ON, q1=-BENT, q2=-BENT)) == 0.75
-
-
-def test_turned_end_for_end_on_the_template_still_counts():
-    w = world((*t.GRIP_AT, Z), psi=abs(BENT), q1=-BENT, q2=-BENT)
-    assert run(w) == 1.0
-
-
-def test_shifted_off_a_lane_loses_the_template():
-    assert run(world((t.GRIP_AT[0] + 0.03, t.GRIP_AT[1], Z), psi=math.pi + BENT, q1=-BENT, q2=-BENT)) == 0.75
-
-
-def test_a_bend_short_of_tolerance_earns_nothing():
-    assert run(world(ON, q1=-math.radians(38.0))) == 0.0
-
-
-def test_a_bend_past_tolerance_earns_nothing():
-    assert run(world(ON, q1=-math.radians(52.0))) == 0.0
-
-
-def test_a_hand_still_on_it_scores_nothing():
-    w = finished()
-    w["left_tcp"] = state((*t.GRIP_AT, t.GRIP_Z))
-    assert run(w) == 0.0
-
-
-def test_an_open_finger_touching_still_counts_as_holding():
-    w = finished()
-    c = t.GRIP_AT
-    # a finger on the block, in the middle segment's own frame: 4.7 cm out from the fingertip midpoint, across the block
-    R = t._rot(w["tube_mid"].quat_xyzw)
-    w["left_tcp"] = state(np.array((*c, t.GRIP_Z)) + R @ np.array((M.TUBE["w"] / 2 + 0.047, 0.0, 0.0)))
-    assert run(w) == 0.0
-
-
-def test_let_go_is_judged_in_the_segments_own_frame():
-    # 6.5 cm out from the nose's long side, measured across its own width while it lies diagonal
-    w = world(psi=math.radians(45.0))
-    n = w["tube_nose"]
-    R = t._rot(n.quat_xyzw)
-    w["left_tcp"] = state(n.pos + R @ np.array((M.TUBE["w"] / 2 + 0.065, -t.L_M / 2 - t.L_N / 2, 0.01)))
-    assert t.let_go(w)
-    w["left_tcp"] = state(n.pos + R @ np.array((M.TUBE["w"] / 2 + 0.05, -t.L_M / 2 - t.L_N / 2, 0.01)))
-    assert not t.let_go(w)
-
-
-def test_overbending_is_zero_for_good():
-    t.note_step(world(q1=-math.radians(56.0)), 0.05)
-    assert t._trial["bad"]
-    assert run(finished()) == 0.0
-
-
-def test_same_way_bends_are_zero_for_good():
-    t._trial.update(sign=[-1, 1], peak=[BENT + t.SPRINGBACK, BENT + t.SPRINGBACK])
-    assert run(world(q1=-BENT, q2=BENT)) == 0.0
-    assert t._trial["why"] == "same way"
-
-
-def test_opposite_signs_are_not_parallel():
-    assert not t.parallel(world(q1=-BENT, q2=BENT))
-
-
-def test_crossing_the_bed_edge_mid_run_is_scored_by_the_final_state():
-    # part of the tube runs past the bed's edge mid-way; it ends finished on the template
-    t.note_step(world(at=(0.2, 0.60, Z)), 0.05)
-    assert not t._trial["bad"]
-    assert run(finished()) == 1.0
-
-
-def test_falling_off_mid_run_is_scored_by_the_final_state():
-    t.note_step(world(at=(0.2, 0.2, t.TOP - 0.05)), 0.05)
-    assert not t._trial["bad"]
-    assert run(finished()) == 1.0
-
-
-def test_a_good_offset_left_off_the_bed_scores_by_the_ladder():
-    # bends, parallel ends and offset right, but it ends off the bed so not on the template: 0.75
-    w = world(at=(0.2, 0.60, Z), psi=math.pi + BENT, q1=-BENT, q2=-BENT)
-    assert not t.on_bed(w) and not t.on_template(w)
-    assert run(w) == 0.75
-
-
-def test_going_back_does_not_clear_a_violation():
-    t.note_step(world(q1=-math.radians(56.0)), 0.05)
-    t.reset_latch()  # only the embodiment's reset does
-    assert not t._trial["bad"]
-
-
-def at_mark(k=0, psi=0.0):
-    """The tube fed in with band k at the former's mark."""
-    s = -1 if k == 0 else 1
-    j = np.array((*M.BAND_AT, Z))
-    return np.array(j - _pivot(psi, s))
-
-
-def test_band_at_reads_the_hinge():
-    w = world(at_mark(0))
-    assert np.allclose(t.band_at(w, 0), M.BAND_AT)
-
-
-def contact_phi(**w):
-    """The handle's sweep at which the shoe first presses what swings about band 0, by scanning."""
-    for deg in np.arange(0.0, 145.0, 0.25):
-        g = t.shoe_gap(world(phi=math.radians(deg), **w), 0, -1)
-        if g is not None and g <= t.TOUCH:
-            return math.radians(deg)
-    raise AssertionError("the shoe never reaches it")
-
-
-def press(phi, dphi=math.radians(1.0), **w):
-    """Two steps with the handle advancing to this sweep: the first only sets where it was."""
-    t.ratchet(world(phi=phi - dphi, **w), 0.05)
-    return t.ratchet(world(phi=phi, **w), 0.05)
-
-
-def test_locked_where_it_lies_with_the_handle_home():
-    lims = t.ratchet(world(at_mark(0), phi=0.0), 0.05)
-    assert all(abs(a) < 1e-9 and abs(b) < 1e-9 for a, b in lims)
-
-
-def test_pressing_shoe_opens_only_the_band_at_the_mark():
-    lims = press(contact_phi(at=at_mark(0)), at=at_mark(0))
-    assert lims[0][0] <= -t.STEP + 1e-9 and abs(lims[1][0]) < 1e-9 and abs(lims[1][1]) < 1e-9
-
-
-def test_a_bend_advances_by_the_step_only():
-    w = dict(at=at_mark(0))
-    lims = press(contact_phi(**w), **w)
-    assert abs(lims[0][0] + t.STEP) < 1e-9
-
-
-def test_away_from_the_mark_the_handle_bends_nothing():
-    at = at_mark(0) + (0.0, 0.03, 0.0)
-    lims = press(contact_phi(at=at), at=at)
-    assert all(abs(a) < 1e-9 and abs(b) < 1e-9 for a, b in lims)
-
-
-def test_a_parked_handle_clear_of_the_tube_lets_no_hand_bend_it():
-    """The review's shortcut: handle parked at the demo's sweep, shoe clear, a hand swinging the rest round."""
-    psi = math.radians(30.0)
-    for deg in range(0, 60, 2):
-        psi = math.radians(deg)
-        w = world(at_mark(0, psi), psi=psi, q1=-psi, phi=t.SWEEP)
-        w["tube_nose"].quat_xyzw = yawq(0.0)
-        lims = t.ratchet(w, 0.05)
-    assert t._trial["peak"] == [0.0, 0.0]
-    assert abs(lims[0][0]) < 1e-9 and abs(lims[0][1]) < 1e-9
-
-
-def test_a_handle_parked_touching_does_not_advance_it():
-    w = dict(at=at_mark(0))
-    phi = contact_phi(**w)
-    t.ratchet(world(phi=phi, **w), 0.05)
-    lims = t.ratchet(world(phi=phi, **w), 0.05)
-    assert abs(lims[0][0]) < 1e-9 and t._trial["peak"][0] == 0.0
-
-
-def test_a_handle_advancing_clear_of_the_tube_does_not_open_it():
-    lims = press(math.radians(5.0), at=at_mark(0))
-    assert abs(lims[0][0]) < 1e-9 and abs(lims[0][1]) < 1e-9
-
-
-def test_a_shoe_past_the_segment_does_not_count():
-    assert t.shoe_gap(world(at_mark(0), phi=math.radians(150.0)), 0, 1) is None
-
-
-def bent(deg):
-    """The tube fed in and bent this far: the nose straight in the guide, the rest swung round."""
-    psi = math.radians(deg)
-    return dict(at=at_mark(0, psi), psi=psi, q1=-psi)
-
-
-def test_bending_lifts_the_peak_for_good():
-    w = bent(30.0)
-    t._trial.update(sign=[-1, 0], on=[True, False])
-    press(contact_phi(**w), **w)
-    assert abs(t._trial["peak"][0] - math.radians(30.0)) < 1e-9
-
-
-def test_springback_is_three_degrees_and_one_way():
-    t._trial.update(sign=[-1, 0], peak=[math.radians(48.0), 0.0], hi=[math.radians(48.0), 0.0])
-    for _ in range(40):
-        lims = t.ratchet(world(at_mark(0) + (0.0, 0.2, 0.0), q1=-math.radians(47.0), phi=0.0), 0.05)
-    assert abs(lims[0][0] + math.radians(45.0)) < 1e-6 and abs(lims[0][1] + math.radians(45.0)) < 1e-6
-
-
-def test_a_finished_band_stays_locked_at_the_mark():
-    t._trial.update(sign=[-1, 0], peak=[math.radians(48.0), 0.0], hi=[math.radians(48.0), 0.0])
-    w = bent(45.0)
-    t.ratchet(world(phi=0.0, **w), 0.05)
-    assert t._trial["done"][0]
-    for _ in range(40):
-        lims = press(contact_phi(**w), **w)
-    assert abs(lims[0][0] + math.radians(45.0)) < 1e-6
-
-
-def test_an_underbent_band_can_take_another_sweep():
-    t._trial.update(sign=[-1, 0], peak=[math.radians(30.0), 0.0], hi=[math.radians(30.0), 0.0])
-    w = bent(25.0)
-    t.ratchet(world(phi=0.0, **w), 0.05)
-    assert not t._trial["done"][0]
-    lims = press(contact_phi(**w), **w)
-    assert abs(lims[0][0] + math.radians(25.0) + t.STEP) < 1e-9
-
-
-def test_an_end_overhanging_the_bed_is_not_penalised():
-    # the block's well inside, but the nose runs past the bed's far edge
-    w = world(at=(M.BED["x1"] - 0.10, 0.2, Z), psi=math.pi / 2)
-    assert t.BOXES and not t.on_bed(w)
-    t.note_step(w, 0.05)
-    assert not t._trial["bad"]
-
-
-def test_the_start_and_the_template_lie_on_the_bed():
-    assert t.on_bed(world(psi=t.START[2])) and t.on_bed(finished())
-
-
-def test_the_demos_sweep_ends_short_of_the_stop():
-    assert max(t.SWEEP, t.SWEEP_2) < math.radians(M.HANDLE["stop"]) - math.radians(20.0)
-
-
-def test_masses_suit_the_material():
-    area = math.pi * (0.02 ** 2 - 0.0176 ** 2) / 4
-    assert abs(area * (M.TUBE["n"] + M.TUBE["m"] + M.TUBE["t"]) * 7850 - 0.195) < 0.002
-    assert abs(M.MASS["nose"] - area * M.TUBE["n"] * 7850) < 0.001
-    assert abs(M.MASS["mid"] - area * M.TUBE["m"] * 7850 - M.TUBE["w"] * M.GRIP["along"] * M.GRIP["h"] * 2700) < 0.001
-
-
-def test_target_offset_matches_the_text():
-    assert abs(t.TARGET_OFFSET - 0.099) < 0.001
+def test_kinks_do_not_count():
+    j = T.ZONE_A[10]
+    q = offset(0, 45)
+    q[j] = D(45)
+    assert run(states(q)) == 0.25  # B counts, the kinked A does not
+    q = offset(0, 45)
+    q[T.ZONE_A[9]], q[T.ZONE_A[10]] = D(22.5), D(22.5)
+    assert run(states(q)) == 0.25
+
+
+def test_too_wide_a_bend_does_not_count():
+    assert run(states(offset(45, 45, n=12))) == 0.0  # 30 mm long: radius 38 mm, not the die's
+
+
+def test_radius_reading():
+    b = T.bend(states(offset()), T.ZONE_A)
+    assert b[1] == 5 and abs(b[2] - 5 * T.DL / D(45)) < 1e-9
+    assert T.RADIUS[0] <= b[2] <= T.RADIUS[1]
+
+
+def test_bend_made_without_the_bender_does_not_count():
+    s = states(offset())
+    T.reset_latch()
+    _made_by(s, False)
+    for _ in range(30):
+        T.note_step(s, 0.05)
+    assert T.score(s) == 0.0
+
+
+def test_overbend_ruins_for_good():
+    T.reset_latch()
+    s = states(offset(56, 45))
+    _made_by(s, True)
+    T.note_step(s, 0.05)
+    s = states(offset())
+    for _ in range(30):
+        T.note_step(s, 0.05)
+    assert T.score(s) == 0.0 and T._trial["why"] == "overbent"
+
+
+def test_same_way_bends_ruin_for_good():
+    q = offset()
+    for j in T.ZONE_B:
+        q[j] = -q.get(j, 0.0)
+    assert run(states(q)) == 0.0 and T._trial["why"] == "same way"
+
+
+def test_start_tube_lies_in_the_groove():
+    f = T.tube_fk({}, T.TUBE_START[:2], T.TUBE_START[2])
+    p, h = T.tube_point(f, T.X_T0)
+    assert np.linalg.norm(p - np.array(M.polar(M.R_BEND, M.ALPHA)[:2])) < 1e-9
+    mark, _ = T.tube_point(f, M.MARK_GAP / 2)
+    assert abs(np.linalg.norm(mark - np.array(M.C)) - math.hypot(M.R_BEND, T.WRAP_45 / 2)) < 1e-9
+
+
+def test_offset_formula():
+    assert abs(M.MARK_GAP - T.OFFSET * 1.414) < 0.0001
+    off, ang = T.offset_of(states(offset()))
+    assert ang < 1e-6 and abs(off - T.OFFSET) <= T.OFFSET_TOL
+
+
+def test_force_numbers():
+    D_, t = M.TUBE_D, 0.030 * 0.0254
+    zp = (D_ ** 3 - (D_ - 2 * t) ** 3) / 6
+    eps = 0.75 * (D_ / 2) / M.R_BEND
+    mp = zp * 320e6 * eps ** 0.54
+    assert abs(mp - M.M_P) < 0.01
+    assert abs(M.K_E - 216.0) < 2.0  # E I / 2.5 mm for 1/8 x 0.030 in copper, E 117 GPa
+    assert 0.3 < math.degrees(M.M_P / M.K_E) * 5 < 3.0  # five yielded hinges spring back about 0.5 degree
+
+
+def test_text_matches_code():
+    j = json.loads((HERE / "task.json").read_text())
+    readme = (HERE / "README.md").read_text()
+    ins = j["instruction"]
+    assert ins in readme and ins in (T.__doc__ or "") + open(HERE / "task.py").read()
+    sc = j["scoring"]
+    for phrase in ("45 +/- 4", "55 degrees", "5.0 +/- 0.4 cm", "3 degrees", "6 cm", "1 s", "10 to 18 mm", "5 degrees", "0.25", "0.5", "0.75", "0.9", "1.0"):
+        assert phrase in sc, phrase
+    for k in ("title", "category", "instruction", "setup", "scoring", "run_limit", "fidelity", "scores"):
+        assert j.get(k)
+    assert len(j["title"]) <= 120 and len(j.get("context", "")) <= 1000 and len(j["setup"]) <= 4000 and len(j["fidelity"]) <= 500
+
+
+def test_demo_fits_and_reaches():
+    wps = T.demo()
+    t = max(sum(w.duration for w in ws) for ws in wps.values())
+    assert t * 20 < 5000 * 0.8  # the recorded demo ran 3,891 steps; the limit leaves room
+    pe, re, bad = T.ik_errors(wps)
+    # the fist aims 2 cm past the latch post to push it open (a force, not a place to reach): those targets may sit
+    # just beyond the left arm's reach
+    assert not [b for b in bad if not (b[0] == "left" and b[2][0] >= 0.29 and b[4] < 10.0)]
