@@ -29,14 +29,22 @@ https://github.com/kairosiann/yam-isaac-lab-arena.
 - **Seeds:** none needed. The start is fixed and `object_jitter=0`, so runs are deterministic; this says nothing about robustness.
 - **At rest** is judged from how far each tube link moves between control steps (0.05 s), not from the solver's
   instantaneous velocities, which chatter at about 2 cm/s in the clamped tube while nothing moves.
+- **Each bend must sit at its mark:** its vertex point (the point of the tube's centre line nearest where the bend's two
+  straight lengths' centre lines meet, the measuring point of the maker's manual, MS-13-43) within 3.5 mm of the mark's
+  centre along the tube, or it is not a correct bend (no credit for it at any rung). 3.5 mm = half the 2 mm mark's width
+  + 1 mm reading a ruler + the manual's 1.6 mm gain for 1/8 in tube at 45 degrees; it keeps the mark on the 11.2 mm arc.
+  The simulation reads the same point from the tube's hinge angles (`bend_place` in `task.py`).
 - **Scoring checks, no simulator:** `python -m pytest -q test_score.py`. `python task.py` checks the demo's length and IK.
 - **The scripted demo** is open loop. It knows the fixed start, the bender's geometry and where an ideal bend leaves the
   tube, all visible on the bench; it is not told the hinges' state or the scorer's. A few of its constants were measured
   in earlier runs of the same fixed start and are marked so in `task.py`: how far the eased tube rolls under the bent
-  leg's weight (9.7 deg), how far the tube lags the hands in the slide, how far the roll lags the hand.
+  leg's weight (9.7 deg), how far the tube lags the hands in the slide (re-measured for this revision: with a 4 mm allowance the tube slid 74.1 mm
+  and bend B sat 4.8 mm past mark B; with -0.8 mm it slid 68.7 mm and the roll dies rode over bend B; now 1.5 mm:
+  bend A 1.4 mm and bend B 2.4 mm from their marks), how far the roll lags the hand.
 - **Wrong-way variants** (debugging only): `TUBE_DEMO=none` (bend A only, hands off at once), `TUBE_DEMO=one`
   (bend A, then the support back to 0), `TUBE_DEMO=same` (slid to mark B but not turned: the second bend goes the same
-  way, a U).
+  way, a U), `TUBE_SLIDE_EXTRA=0.004` (the tube slid about 3.4 mm too far: both bends of the right shape and
+  the offset right, but bend B about 5 mm past mark B).
 - **Third-party assets:** none. Every part is built from boxes, cylinders and capsules in the task's own code (`tube_offset/mech.py`).
 
 ## The real trial
@@ -46,7 +54,7 @@ https://github.com/kairosiann/yam-isaac-lab-arena.
   setup gives.
 - **Tube:** 1/8 in OD x 0.030 in wall seamless soft-annealed copper, ASTM B280, UNS C12200 (for example Streamline/Mueller
   D 02050, a 50 ft coil, or Midland 972180), cut to 30 cm and straightened, 16 g.
-- **Tools to score:** a 9/16 in radius gauge, a protractor, a tape, a fine marker; everything is read on the tube where it sits latched in the bender, then it is taken out by hand.
+- **Tools to score:** a 9/16 in radius gauge, a protractor, a tape, a ruler, two straightedges, a fine marker; everything is read on the tube where it sits latched in the bender, then it is taken out by hand.
 - **Not published by Swagelok, measure on the bought unit before the first trial:** the handle lengths and the grip's
   radius from the die axis (the simulation uses 21 cm), the bender's mass, the latch's closing force. The simulated frame
   sizes are estimates from the manual's photographs.

@@ -250,8 +250,38 @@ def counted(b, k):
     return n >= 3 and r is not None and RADIUS[0] <= r <= RADIUS[1] and _trial["hand"][k] <= max(HAND_MIN, HAND_SHARE * abs(a))
 
 
-def bend_good(b, k):
-    return counted(b, k) and BENT - BEND_TOL <= abs(b[0]) <= BENT + BEND_TOL
+MARK_TOL = 0.0035  # a bend's place: its vertex point within 3.5 mm of its mark, along the tube (this task's own value)
+LEGS = (("mid", "leg_a"), ("mid", "leg_b"))
+
+
+def bend_place(q, k):
+    """Where bend k (0: mark A, 1: mark B) sits from its mark, in m along the tube (+: toward that end, -: toward the
+    middle), or None without a bend. The bend's vertex is where its two straight lengths' centre lines meet (two
+    straightedges); its place is the point of the tube's centre line nearest the vertex, the bend's middle."""
+    qs = {j: float(q[f"tube/{j}"]) for j in HINGES}
+    f = tube_fk(qs)
+    (x0, y0, a0), (x1, y1, a1) = f[LEGS[k][0]], f[LEGS[k][1]]
+    d0, d1 = np.array((math.cos(a0), math.sin(a0))), np.array((math.cos(a1), math.sin(a1)))
+    cr = float(d0[0] * d1[1] - d0[1] * d1[0])
+    if abs(cr) < math.sin(math.radians(5.0)):
+        return None
+    w = np.array((x1 - x0, y1 - y0))
+    t = float(w[0] * d1[1] - w[1] * d1[0]) / cr
+    vx = np.array((x0, y0)) + t * d0
+    sgn = 1.0 if k == 0 else -1.0
+    xs = sgn * (M.MARK_GAP / 2 + np.arange(-M.ZONE, M.ZONE + 1e-9, 0.0001))
+    dist = [np.linalg.norm(tube_point(f, float(x))[0] - vx) for x in xs]
+    return float(sgn * xs[int(np.argmin(dist))] - M.MARK_GAP / 2)
+
+
+def placed(s, k):
+    p = bend_place(s["q"], k)
+    return p is not None and abs(p) <= MARK_TOL + 1e-9
+
+
+def bend_good(b, k, s=None):
+    """A correct bend: counted, 45 +/- 4 degrees, and at its mark (when a reading s is given)."""
+    return counted(b, k) and BENT - BEND_TOL <= abs(b[0]) <= BENT + BEND_TOL and (s is None or placed(s, k))
 
 
 def _axis(s, n):
@@ -328,12 +358,13 @@ def note_step(s, dt):
 def score(s):
     """Read at the end of the run. 0 for good if a bend passed 55 degrees or the bends went the same way. 0 unless the
     tube is let go. Counted bends (spread round the die: 3+ hinges, none over half, radius 10-18 mm): 0.25 for one at
-    45 +/- 4 degrees; 0.5 for both, an offset; 0.75 with the ends parallel within 3 degrees and 5.0 +/- 0.4 cm apart; 0.9 with
+    45 +/- 4 degrees; 0.5 for both, an offset; each bend must also sit at its mark (its vertex point within 3.5 mm of it along the tube)
+    or it is not a correct bend; 0.75 with the ends parallel within 3 degrees and 5.0 +/- 0.4 cm apart; 0.9 with
     the roll support also back at its 0 mark within 5 degrees; 1.0 with the tube also at rest for the last 1 s."""
     if not _trial or _trial["bad"] or not let_go(s):
         return 0.0
     ba, bb = bend(s, ZONE_A), bend(s, ZONE_B)
-    n = bend_good(ba, 0) + bend_good(bb, 1)
+    n = bend_good(ba, 0, s) + bend_good(bb, 1, s)
     if n < 2:
         return 0.25 if n else 0.0
     off, ang = offset_of(s)
@@ -351,6 +382,8 @@ def _print(s):
     fa = lambda b: f"{d(b[0]):6.2f}/{b[1]}/{'-' if b[2] is None else round(b[2] * 1000, 1)}"  # noqa: E731
     off, ang = offset_of(s)
     mid = s["tube/mid"].pos
+    pl = [bend_place(q, k) for k in (0, 1)]
+    print(f"PLACE A {'-' if pl[0] is None else round(pl[0] * 1000, 2)} B {'-' if pl[1] is None else round(pl[1] * 1000, 2)} mm", flush=True)
     print(f"TUBE t={s['t']:6.2f} sup {d(q['bender/support_turn']):6.2f} clev {d(q['bender/clevis_turn']):6.2f} latch {d(q['bender/latch_turn']):5.1f} "
           f"A {fa(ba)} B {fa(bb)} off {off * 1000:5.1f} par {d(ang):5.2f} mid {np.round(1000 * (np.asarray(mid) - (0, 0, TOP)), 1).tolist()} "
           f"vmax {max(np.linalg.norm(s[f'tube/{n}'].lin_vel) for n in LINKS):.3f} L {np.round(1000 * (s['left_tcp'].pos - (0, 0, TOP)), 1).tolist()} "
@@ -580,7 +613,7 @@ def tube_point(frames, x):
 
 
 SLIDE_X = -0.120  # the right hand slides the tube by leg B, 12 cm from the middle
-SLIDE_EXTRA = float(os.environ.get("TUBE_SLIDE_EXTRA", "0.004"))  # the hand's lag against the groove's friction (measured, d34L)
+SLIDE_EXTRA = float(os.environ.get("TUBE_SLIDE_EXTRA", "0.0015"))  # the hand's lag against the groove's friction (measured: with 4 mm extra the tube slid 74.1 mm and bend B sat 4.8 mm past mark B, d77H; with -0.8 mm it slid 68.7 mm and the roll dies rode over bend B, rev2_e1)
 CRANK_X = 0.130  # the left hand rolls the tube by leg A, 2 cm from its end
 UNLATCH_ROLL = math.radians(float(os.environ.get("TUBE_UNLATCH_ROLL", "14.7")))
 HOLD_A_X = 0.140  # the left hand steadies leg A 1 cm from its end while the right hand re-grips

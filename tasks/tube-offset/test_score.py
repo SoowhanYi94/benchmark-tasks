@@ -131,6 +131,61 @@ def test_bend_made_without_the_bender_does_not_count():
     assert T.score(s) == 0.0
 
 
+def moved(da=0, db=0, wa=1.0, wb=1.0):
+    """The ideal offset with bend A's hinges moved da hinges (2.5 mm each) toward end A and bend B's db toward end B;
+    w mixes the pattern moved by d with the one moved by d - 1 (w = 1: moved by d), to place a bend between hinges."""
+    def zone(z, d, w):
+        base = [z[i] for i in range(len(z)) if z[i] in offset()]
+        out = {}
+        for dd, ww in ((d, w), (d - 1, 1.0 - w)):
+            for j in base:
+                k = z[z.index(j) + dd]
+                out[k] = out.get(k, 0.0) + ww * offset()[j]
+        return out
+    return {**zone(T.ZONE_A, da, wa), **zone(T.ZONE_B, db, wb)}
+
+
+def test_bend_place_reading():
+    for da, db in ((0, 0), (1, 0), (0, 1), (2, -2)):
+        q = states(moved(da, db))["q"]
+        assert abs(T.bend_place(q, 0) - da * T.DL) < 2e-4 and abs(T.bend_place(q, 1) - db * T.DL) < 2e-4
+    assert T.bend_place(states()["q"], 0) is None
+
+
+def test_offset_correct_but_bend_off_its_mark():
+    # a correct shape whose ends still lie 5.0 +/- 0.4 cm apart and parallel: the old ladder gave it 1.0
+    for q in (moved(2, 0), moved(-2, 0)):  # bend A 5 mm off mark A
+        s = states(q)
+        off, ang = T.offset_of(s)
+        assert ang < 1e-6 and abs(off - T.OFFSET) <= T.OFFSET_TOL
+        assert run(s) == 0.25
+    for q in (moved(0, 2), moved(0, -2)):  # bend B 5 mm off mark B
+        assert run(states(q)) == 0.25
+    assert run(states(moved(2, -2))) == 0.0  # both 5 mm off, the same way along the tube: offset exact, no correct bend
+    assert run(states(moved(6, -6))) == 0.0  # the whole offset 15 mm along the tube
+    assert run(states(moved(1, 1))) == 1.0  # both 2.5 mm off: on their marks
+    assert run(states(moved(0, 0))) == 1.0
+
+
+def _at(k, target):
+    """A mix of the 1- and 2-hinge moves that puts bend k (0 A, 1 B) at `target` m from its mark."""
+    lo, hi = 0.0, 1.0
+    for _ in range(40):
+        w = (lo + hi) / 2
+        q = moved(2, 0, wa=w) if k == 0 else moved(0, 2, wb=w)
+        p = T.bend_place(states(q)["q"], k)
+        lo, hi = (w, hi) if p < target else (lo, w)
+    return q, p
+
+
+def test_bend_place_boundary():
+    for k in (0, 1):
+        q, p = _at(k, T.MARK_TOL - 0.0002)
+        assert abs(p - (T.MARK_TOL - 0.0002)) < 1e-4 and run(states(q)) == 1.0
+        q, p = _at(k, T.MARK_TOL + 0.0002)
+        assert abs(p - (T.MARK_TOL + 0.0002)) < 1e-4 and run(states(q)) == 0.25
+
+
 def test_overbend_ruins_for_good():
     T.reset_latch()
     s = states(offset(56, 45))
@@ -179,7 +234,7 @@ def test_text_matches_code():
     ins = j["instruction"]
     assert ins in readme and ins in (T.__doc__ or "") + open(HERE / "task.py").read()
     sc = j["scoring"]
-    for phrase in ("45 +/- 4", "55 degrees", "5.0 +/- 0.4 cm", "3 degrees", "6 cm", "1 s", "10 to 18 mm", "5 degrees", "0.25", "0.5", "0.75", "0.9", "1.0"):
+    for phrase in ("45 +/- 4", "55 degrees", "5.0 +/- 0.4 cm", "3 degrees", "6 cm", "1 s", "10 to 18 mm", "5 degrees", "3.5 mm", "vertex", "0.25", "0.5", "0.75", "0.9", "1.0"):
         assert phrase in sc, phrase
     for k in ("title", "category", "instruction", "setup", "scoring", "run_limit", "fidelity", "scores"):
         assert j.get(k)
